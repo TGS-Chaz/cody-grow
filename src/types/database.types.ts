@@ -462,6 +462,156 @@ export type Database = {
           },
         ]
       }
+      cody_conversations: {
+        Row: {
+          context_id: string | null
+          context_type: string | null
+          created_at: string | null
+          id: string
+          org_id: string
+          product: string
+          title: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          context_id?: string | null
+          context_type?: string | null
+          created_at?: string | null
+          id?: string
+          org_id: string
+          product: string
+          title?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          context_id?: string | null
+          context_type?: string | null
+          created_at?: string | null
+          id?: string
+          org_id?: string
+          product?: string
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cody_conversations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cody_insights: {
+        Row: {
+          acted_on_at: string | null
+          action_url: string | null
+          confidence: number | null
+          content: string
+          created_at: string | null
+          dismissed_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          expires_at: string | null
+          id: string
+          insight_type: string
+          org_id: string
+          product: string
+          severity: string | null
+          title: string
+        }
+        Insert: {
+          acted_on_at?: string | null
+          action_url?: string | null
+          confidence?: number | null
+          content: string
+          created_at?: string | null
+          dismissed_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          expires_at?: string | null
+          id?: string
+          insight_type: string
+          org_id: string
+          product: string
+          severity?: string | null
+          title: string
+        }
+        Update: {
+          acted_on_at?: string | null
+          action_url?: string | null
+          confidence?: number | null
+          content?: string
+          created_at?: string | null
+          dismissed_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          expires_at?: string | null
+          id?: string
+          insight_type?: string
+          org_id?: string
+          product?: string
+          severity?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cody_insights_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cody_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string | null
+          id: string
+          model: string | null
+          role: string
+          tokens_used: number | null
+          tool_calls: Json | null
+          tool_results: Json | null
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          model?: string | null
+          role: string
+          tokens_used?: number | null
+          tool_calls?: Json | null
+          tool_results?: Json | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          model?: string | null
+          role?: string
+          tokens_used?: number | null
+          tool_calls?: Json | null
+          tool_results?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cody_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "cody_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competitive_positions: {
         Row: {
           categories_you_lack: string[] | null

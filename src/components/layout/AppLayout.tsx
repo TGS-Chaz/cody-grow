@@ -28,6 +28,8 @@ import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import codyIcon from "@/assets/cody-icon.svg";
 import { Toaster } from "@/components/ui/sonner";
+import AskCody from "@/components/cody/AskCody";
+import CodyContextProvider from "@/components/cody/CodyContextProvider";
 
 const navGroups = [
   { label: "Overview", items: [
@@ -73,6 +75,7 @@ export default function AppLayout() {
   };
 
   return (
+    <CodyContextProvider>
     <div className="flex h-screen w-full overflow-hidden bg-background">
       {/* Desktop Sidebar */}
       <aside
@@ -264,6 +267,8 @@ export default function AppLayout() {
         </nav>
       </main>
       <Toaster />
+      <AskCody />
     </div>
+    </CodyContextProvider>
   );
 }

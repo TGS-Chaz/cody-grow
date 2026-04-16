@@ -7,6 +7,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import StatCard from "@/components/shared/StatCard";
 import PageHeader from "@/components/shared/PageHeader";
+import CodyInsightsPanel from "@/components/cody/CodyInsightsPanel";
 
 const gettingStarted = [
   { icon: Settings, title: "Configure Strains & Areas", description: "Set up your strain library and grow areas before adding plants.", to: "/settings" },
@@ -33,6 +34,11 @@ export default function Dashboard() {
         <StatCard label="Upcoming Harvests" value={0} accentClass="stat-accent-amber" delay={0.1} />
         <StatCard label="Active Grow Cycles" value={0} accentClass="stat-accent-blue" delay={0.15} />
         <StatCard label="CCRS Status" value="--" accentClass="stat-accent-teal" delay={0.2} />
+      </div>
+
+      {/* Cody Insights */}
+      <div className="mb-8">
+        <CodyInsightsPanel limit={5} />
       </div>
 
       {/* Getting Started */}
