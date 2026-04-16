@@ -19,8 +19,14 @@ import {
   Sparkles,
   Warehouse,
   Plus,
+  Loader2,
+  ArrowRight,
+  Dna,
+  FileText,
+  Users as UsersIcon,
 } from "lucide-react";
 import codyIcon from "@/assets/cody-icon.svg";
+import { useGlobalSearch, ENTITY_LABELS, ENTITY_LIST_PATH, SearchEntity } from "@/hooks/useGlobalSearch";
 
 interface CommandItem {
   id: string;
@@ -33,10 +39,26 @@ interface CommandItem {
   keywords?: string[];
 }
 
+const ENTITY_ICON: Record<SearchEntity, any> = {
+  plant: Leaf,
+  batch: Barcode,
+  strain: Dna,
+  account: Building2,
+  order: ShoppingCart,
+  product: Package,
+  cycle: CalendarDays,
+  harvest: Scissors,
+  employee: UsersIcon,
+  manifest: FileText,
+};
+
 export default function CommandBar() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
+  const { results, byEntity, counts, isSearching } = useGlobalSearch(query);
+  const hasResults = results.length > 0;
+  const hasQuery = query.trim().length >= 2;
 
   // Global ⌘K / Ctrl+K listener
   useEffect(() => {
@@ -120,41 +142,80 @@ export default function CommandBar() {
                 <Command.Input
                   value={query}
                   onValueChange={setQuery}
-                  placeholder="Search or ask Cody…"
+                  placeholder="Search plants, batches, orders, accounts… or ask Cody"
                   className="flex-1 bg-transparent text-[14px] placeholder:text-muted-foreground/60 focus:outline-none"
                 />
+                {isSearching && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
                 <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border bg-muted/40 text-muted-foreground">esc</kbd>
               </div>
-              <Command.List className="max-h-[360px] overflow-y-auto p-2">
+              <Command.List className="max-h-[420px] overflow-y-auto p-2">
                 <Command.Empty className="py-8 text-center text-[12px] text-muted-foreground">
-                  No results. Press Enter to ask Cody.
+                  {hasQuery && !isSearching ? "No matches. Press Enter to ask Cody." : "Start typing to search…"}
                 </Command.Empty>
-                <Command.Group heading="Create" className="[&>[cmdk-group-heading]]:text-[10px] [&>[cmdk-group-heading]]:uppercase [&>[cmdk-group-heading]]:tracking-wider [&>[cmdk-group-heading]]:text-muted-foreground [&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:py-1.5">
-                  {quickActions.map((item) => (
-                    <Command.Item
-                      key={item.id}
-                      value={`${item.label} ${item.keywords?.join(" ") ?? ""}`}
-                      onSelect={() => handleRun(item)}
-                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] cursor-pointer data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
-                    >
-                      <item.icon className="w-3.5 h-3.5 text-muted-foreground" />
-                      {item.label}
-                    </Command.Item>
-                  ))}
-                </Command.Group>
-                <Command.Group heading="Navigate" className="[&>[cmdk-group-heading]]:text-[10px] [&>[cmdk-group-heading]]:uppercase [&>[cmdk-group-heading]]:tracking-wider [&>[cmdk-group-heading]]:text-muted-foreground [&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:py-1.5 [&>[cmdk-group-heading]]:mt-2">
-                  {navItems.map((item) => (
-                    <Command.Item
-                      key={item.id}
-                      value={item.label}
-                      onSelect={() => handleRun(item)}
-                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] cursor-pointer data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
-                    >
-                      <item.icon className="w-3.5 h-3.5 text-muted-foreground" />
-                      {item.label}
-                    </Command.Item>
-                  ))}
-                </Command.Group>
+
+                {hasResults && (Object.keys(byEntity) as SearchEntity[]).map((entity) => {
+                  const items = byEntity[entity];
+                  if (items.length === 0) return null;
+                  const Icon = ENTITY_ICON[entity];
+                  return (
+                    <Command.Group key={entity} heading={ENTITY_LABELS[entity]} className="[&>[cmdk-group-heading]]:text-[10px] [&>[cmdk-group-heading]]:uppercase [&>[cmdk-group-heading]]:tracking-wider [&>[cmdk-group-heading]]:text-muted-foreground [&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:py-1.5 [&>[cmdk-group-heading]]:mt-2">
+                      {items.map((item) => (
+                        <Command.Item
+                          key={`${entity}:${item.id}`}
+                          value={`${entity} ${item.label} ${item.sublabel ?? ""}`}
+                          onSelect={() => { setOpen(false); setQuery(""); navigate(item.href); }}
+                          className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] cursor-pointer data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
+                        >
+                          <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span className="flex-1 min-w-0 truncate">{item.label}</span>
+                          {item.sublabel && <span className="text-[10px] text-muted-foreground truncate max-w-[160px]">{item.sublabel}</span>}
+                        </Command.Item>
+                      ))}
+                      {counts[entity] >= 5 && (
+                        <Command.Item
+                          value={`view-all-${entity}`}
+                          onSelect={() => { setOpen(false); setQuery(""); navigate(ENTITY_LIST_PATH[entity]); }}
+                          className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[11px] cursor-pointer text-muted-foreground hover:text-primary data-[selected=true]:bg-accent"
+                        >
+                          <ArrowRight className="w-3 h-3" />
+                          View all {ENTITY_LABELS[entity]} →
+                        </Command.Item>
+                      )}
+                    </Command.Group>
+                  );
+                })}
+
+                {!hasResults && !hasQuery && (
+                  <>
+                    <Command.Group heading="Create" className="[&>[cmdk-group-heading]]:text-[10px] [&>[cmdk-group-heading]]:uppercase [&>[cmdk-group-heading]]:tracking-wider [&>[cmdk-group-heading]]:text-muted-foreground [&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:py-1.5">
+                      {quickActions.map((item) => (
+                        <Command.Item
+                          key={item.id}
+                          value={`${item.label} ${item.keywords?.join(" ") ?? ""}`}
+                          onSelect={() => handleRun(item)}
+                          className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] cursor-pointer data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
+                        >
+                          <item.icon className="w-3.5 h-3.5 text-muted-foreground" />
+                          {item.label}
+                        </Command.Item>
+                      ))}
+                    </Command.Group>
+                    <Command.Group heading="Navigate" className="[&>[cmdk-group-heading]]:text-[10px] [&>[cmdk-group-heading]]:uppercase [&>[cmdk-group-heading]]:tracking-wider [&>[cmdk-group-heading]]:text-muted-foreground [&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:py-1.5 [&>[cmdk-group-heading]]:mt-2">
+                      {navItems.map((item) => (
+                        <Command.Item
+                          key={item.id}
+                          value={item.label}
+                          onSelect={() => handleRun(item)}
+                          className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] cursor-pointer data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
+                        >
+                          <item.icon className="w-3.5 h-3.5 text-muted-foreground" />
+                          {item.label}
+                        </Command.Item>
+                      ))}
+                    </Command.Group>
+                  </>
+                )}
+
                 <Command.Group heading="AI" className="[&>[cmdk-group-heading]]:text-[10px] [&>[cmdk-group-heading]]:uppercase [&>[cmdk-group-heading]]:tracking-wider [&>[cmdk-group-heading]]:text-muted-foreground [&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:py-1.5 [&>[cmdk-group-heading]]:mt-2">
                   <Command.Item
                     value="ask cody"

@@ -61,6 +61,7 @@ export interface BatchFilters {
   is_available?: boolean;
   is_medical?: boolean;
   is_doh_compliant?: boolean;
+  is_non_cannabis?: boolean;
   has_parent?: boolean;
   q?: string;
 }
@@ -188,6 +189,7 @@ export function useBatches(filters: BatchFilters = {}) {
       if (filters.is_available != null) q = q.eq("is_available", filters.is_available);
       if (filters.is_medical != null) q = q.eq("is_medical", filters.is_medical);
       if (filters.is_doh_compliant != null) q = q.eq("is_doh_compliant", filters.is_doh_compliant);
+      if (filters.is_non_cannabis != null) q = q.eq("is_non_cannabis", filters.is_non_cannabis);
       if (filters.has_parent === true) q = q.not("parent_batch_id", "is", null);
       if (filters.has_parent === false) q = q.is("parent_batch_id", null);
       const { data: rows, error: err } = await q.order("created_at", { ascending: false, nullsFirst: false });

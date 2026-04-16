@@ -63,6 +63,13 @@ import DisposalsPage from "@/pages/compliance/DisposalsPage";
 import LabelsPage from "@/pages/compliance/LabelsPage";
 import TasksPage from "@/pages/operations/TasksPage";
 import GrowLogsPage from "@/pages/operations/GrowLogsPage";
+import ReportsPage from "@/pages/reports/ReportsPage";
+import ReportRunnerPage from "@/pages/reports/ReportRunnerPage";
+import MarketplaceConfigPage from "@/pages/marketplace/MarketplaceConfigPage";
+import PublicMenuPage from "@/pages/marketplace/PublicMenuPage";
+import RecallsPage from "@/pages/compliance/RecallsPage";
+import RecallDetailPage from "@/pages/compliance/RecallDetailPage";
+import SuppliesPage from "@/pages/inventory/SuppliesPage";
 import { ShortcutsProvider } from "@/components/shared/KeyboardShortcuts";
 
 function ScrollToTop() {
@@ -81,6 +88,7 @@ export default function App() {
             <ShortcutsProvider>
               <Routes>
                 {/* Public routes */}
+                <Route path="/menu/:slug" element={<PublicMenuPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/request-access" element={<RequestAccessPage />} />
@@ -116,6 +124,7 @@ export default function App() {
                     <Route path="/inventory/batches/:id" element={<BatchDetailPage />} />
                     <Route path="/inventory/qa" element={<QAPage />} />
                     <Route path="/inventory/qa/:id" element={<QALotDetailPage />} />
+                    <Route path="/inventory/supplies" element={<SuppliesPage />} />
                     <Route path="/inventory/production" element={<ProductionPage />} />
                     <Route path="/inventory/production/bom/:id" element={<BOMDetailPage />} />
                     <Route path="/inventory/production/:id" element={<ProductionRunDetailPage />} />
@@ -137,11 +146,20 @@ export default function App() {
                     <Route path="/compliance/audit" element={<AuditLogPage />} />
                     <Route path="/compliance/disposals" element={<DisposalsPage />} />
                     <Route path="/compliance/labels" element={<LabelsPage />} />
+                    <Route path="/compliance/recalls" element={<RecallsPage />} />
+                    <Route path="/compliance/recalls/:id" element={<RecallDetailPage />} />
                     <Route path="/compliance/manifests" element={<PlaceholderPage />} />
 
                     {/* Operations */}
                     <Route path="/operations/tasks" element={<TasksPage />} />
                     <Route path="/operations/logs" element={<GrowLogsPage />} />
+
+                    {/* Reports */}
+                    <Route path="/reports" element={<ReportsPage />} />
+                    <Route path="/reports/:id" element={<ReportRunnerPage />} />
+
+                    {/* Marketplace (authenticated config) */}
+                    <Route path="/marketplace" element={<MarketplaceConfigPage />} />
 
                     {/* Settings */}
                     <Route path="/settings" element={<SettingsHub />} />
