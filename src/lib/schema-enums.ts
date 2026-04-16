@@ -39,8 +39,47 @@ export const ACCOUNT_LICENSE_TYPE_LABELS: Record<AccountLicenseType, string> = {
 // ─── grow_areas.type / canopy_type ────────────────────────────────────────────
 export const AREA_TYPES = ["grow", "storage", "processing", "quarantine", "drying", "curing"] as const;
 export type AreaType = typeof AREA_TYPES[number];
-export const AREA_CANOPY_TYPES = ["flower", "veg", "mother", "clone", "drying", "storage"] as const;
+/** Expanded 2026-04-16 to include 'processing' and 'quarantine' so the Areas
+ * form can offer a single 8-type selector aligned with room purpose. */
+export const AREA_CANOPY_TYPES = [
+  "flower", "veg", "mother", "clone", "drying",
+  "storage", "processing", "quarantine",
+] as const;
 export type AreaCanopyType = typeof AREA_CANOPY_TYPES[number];
+export const AREA_CANOPY_TYPE_LABELS: Record<AreaCanopyType, string> = {
+  flower: "Flower",
+  veg: "Veg",
+  mother: "Mother",
+  clone: "Clone",
+  drying: "Drying",
+  storage: "Storage",
+  processing: "Processing",
+  quarantine: "Quarantine",
+};
+/** Tailwind + hex colors per canopy type — used for left border, badge, and
+ * the floor-plan placeholder tiles. */
+export const AREA_CANOPY_TYPE_COLORS: Record<AreaCanopyType, { bg: string; text: string; border: string; hex: string }> = {
+  flower:     { bg: "bg-purple-500/15",  text: "text-purple-500",  border: "border-l-purple-500",  hex: "#A855F7" },
+  veg:        { bg: "bg-emerald-500/15", text: "text-emerald-500", border: "border-l-emerald-500", hex: "#10B981" },
+  mother:     { bg: "bg-blue-500/15",    text: "text-blue-500",    border: "border-l-blue-500",    hex: "#3B82F6" },
+  clone:      { bg: "bg-cyan-500/15",    text: "text-cyan-500",    border: "border-l-cyan-500",    hex: "#06B6D4" },
+  drying:     { bg: "bg-orange-500/15",  text: "text-orange-500",  border: "border-l-orange-500",  hex: "#F97316" },
+  storage:    { bg: "bg-gray-500/15",    text: "text-gray-500",    border: "border-l-gray-500",    hex: "#6B7280" },
+  processing: { bg: "bg-indigo-500/15",  text: "text-indigo-500",  border: "border-l-indigo-500",  hex: "#6366F1" },
+  quarantine: { bg: "bg-red-500/15",     text: "text-red-500",     border: "border-l-red-500",     hex: "#EF4444" },
+};
+
+// ─── grow_areas.light_type ────────────────────────────────────────────────────
+export const AREA_LIGHT_TYPES = ["led", "hps", "cmh", "fluorescent", "natural_greenhouse", "mixed"] as const;
+export type AreaLightType = typeof AREA_LIGHT_TYPES[number];
+export const AREA_LIGHT_TYPE_LABELS: Record<AreaLightType, string> = {
+  led: "LED",
+  hps: "HPS",
+  cmh: "CMH",
+  fluorescent: "Fluorescent",
+  natural_greenhouse: "Natural / Greenhouse",
+  mixed: "Mixed",
+};
 
 // ─── grow_batches.source_type ─────────────────────────────────────────────────
 export const BATCH_SOURCE_TYPES = [
