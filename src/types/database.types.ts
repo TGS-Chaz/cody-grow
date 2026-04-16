@@ -1743,14 +1743,113 @@ export type Database = {
           },
         ]
       }
+      grow_alert_history: {
+        Row: {
+          actions_taken: Json | null
+          context_json: Json | null
+          id: string
+          rule_id: string
+          status: string | null
+          triggered_at: string | null
+        }
+        Insert: {
+          actions_taken?: Json | null
+          context_json?: Json | null
+          id?: string
+          rule_id: string
+          status?: string | null
+          triggered_at?: string | null
+        }
+        Update: {
+          actions_taken?: Json | null
+          context_json?: Json | null
+          id?: string
+          rule_id?: string
+          status?: string | null
+          triggered_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_alert_history_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "grow_alert_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_alert_rules: {
+        Row: {
+          actions: Json
+          condition_json: Json | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          last_triggered_at: string | null
+          name: string
+          org_id: string
+          trigger_config: Json
+          trigger_count: number | null
+          trigger_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          actions: Json
+          condition_json?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          name: string
+          org_id: string
+          trigger_config: Json
+          trigger_count?: number | null
+          trigger_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          actions?: Json
+          condition_json?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          name?: string
+          org_id?: string
+          trigger_config?: Json
+          trigger_count?: number | null
+          trigger_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_alert_rules_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grow_areas: {
         Row: {
+          canopy_sqft: number | null
+          canopy_type: string | null
+          ccrs_created_by_username: string | null
+          ccrs_updated_by_username: string | null
           created_at: string | null
           created_by: string | null
           external_id: string
           facility_id: string | null
           id: string
           is_active: boolean | null
+          is_licensed_canopy: boolean | null
           is_quarantine: boolean | null
           name: string
           notes: string | null
@@ -1759,12 +1858,17 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          canopy_sqft?: number | null
+          canopy_type?: string | null
+          ccrs_created_by_username?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           external_id: string
           facility_id?: string | null
           id?: string
           is_active?: boolean | null
+          is_licensed_canopy?: boolean | null
           is_quarantine?: boolean | null
           name: string
           notes?: string | null
@@ -1773,12 +1877,17 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          canopy_sqft?: number | null
+          canopy_type?: string | null
+          ccrs_created_by_username?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           external_id?: string
           facility_id?: string | null
           id?: string
           is_active?: boolean | null
+          is_licensed_canopy?: boolean | null
           is_quarantine?: boolean | null
           name?: string
           notes?: string | null
@@ -1860,6 +1969,8 @@ export type Database = {
         Row: {
           area_id: string | null
           barcode: string
+          ccrs_created_by_username: string | null
+          ccrs_updated_by_username: string | null
           created_at: string | null
           created_by: string | null
           current_quantity: number
@@ -1877,6 +1988,7 @@ export type Database = {
           is_non_cannabis: boolean | null
           is_pack_to_order: boolean | null
           is_trade_sample: boolean | null
+          marketplace_menu_ids: string[] | null
           notes: string | null
           org_id: string
           packaged_date: string | null
@@ -1894,6 +2006,8 @@ export type Database = {
         Insert: {
           area_id?: string | null
           barcode: string
+          ccrs_created_by_username?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           current_quantity: number
@@ -1911,6 +2025,7 @@ export type Database = {
           is_non_cannabis?: boolean | null
           is_pack_to_order?: boolean | null
           is_trade_sample?: boolean | null
+          marketplace_menu_ids?: string[] | null
           notes?: string | null
           org_id: string
           packaged_date?: string | null
@@ -1928,6 +2043,8 @@ export type Database = {
         Update: {
           area_id?: string | null
           barcode?: string
+          ccrs_created_by_username?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           current_quantity?: number
@@ -1945,6 +2062,7 @@ export type Database = {
           is_non_cannabis?: boolean | null
           is_pack_to_order?: boolean | null
           is_trade_sample?: boolean | null
+          marketplace_menu_ids?: string[] | null
           notes?: string | null
           org_id?: string
           packaged_date?: string | null
@@ -2199,6 +2317,149 @@ export type Database = {
           },
         ]
       }
+      grow_canopy_allotments: {
+        Row: {
+          clone_canopy_sqft: number | null
+          created_at: string | null
+          effective_date: string
+          expires_date: string | null
+          facility_id: string
+          flower_canopy_sqft: number | null
+          id: string
+          license_tier: string | null
+          licensed_canopy_sqft: number
+          mother_canopy_sqft: number | null
+          org_id: string
+          updated_at: string | null
+          veg_canopy_sqft: number | null
+          wslcb_approved: boolean | null
+        }
+        Insert: {
+          clone_canopy_sqft?: number | null
+          created_at?: string | null
+          effective_date: string
+          expires_date?: string | null
+          facility_id: string
+          flower_canopy_sqft?: number | null
+          id?: string
+          license_tier?: string | null
+          licensed_canopy_sqft: number
+          mother_canopy_sqft?: number | null
+          org_id: string
+          updated_at?: string | null
+          veg_canopy_sqft?: number | null
+          wslcb_approved?: boolean | null
+        }
+        Update: {
+          clone_canopy_sqft?: number | null
+          created_at?: string | null
+          effective_date?: string
+          expires_date?: string | null
+          facility_id?: string
+          flower_canopy_sqft?: number | null
+          id?: string
+          license_tier?: string | null
+          licensed_canopy_sqft?: number
+          mother_canopy_sqft?: number | null
+          org_id?: string
+          updated_at?: string | null
+          veg_canopy_sqft?: number | null
+          wslcb_approved?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_canopy_allotments_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "grow_facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_canopy_allotments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_ccrs_submission_files: {
+        Row: {
+          accepted_at: string | null
+          ccrs_error_details: string | null
+          ccrs_response_json: Json | null
+          created_at: string | null
+          created_by: string | null
+          errors_count: number | null
+          file_category: string
+          file_name: string
+          file_size_bytes: number | null
+          file_url: string | null
+          id: string
+          integrator_id: string | null
+          license_number: string
+          number_records: number
+          org_id: string
+          record_ids: string[] | null
+          status: string | null
+          submitted_by_username: string | null
+          submitted_date: string | null
+          uploaded_at: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          ccrs_error_details?: string | null
+          ccrs_response_json?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          errors_count?: number | null
+          file_category: string
+          file_name: string
+          file_size_bytes?: number | null
+          file_url?: string | null
+          id?: string
+          integrator_id?: string | null
+          license_number: string
+          number_records: number
+          org_id: string
+          record_ids?: string[] | null
+          status?: string | null
+          submitted_by_username?: string | null
+          submitted_date?: string | null
+          uploaded_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          ccrs_error_details?: string | null
+          ccrs_response_json?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          errors_count?: number | null
+          file_category?: string
+          file_name?: string
+          file_size_bytes?: number | null
+          file_url?: string | null
+          id?: string
+          integrator_id?: string | null
+          license_number?: string
+          number_records?: number
+          org_id?: string
+          record_ids?: string[] | null
+          status?: string | null
+          submitted_by_username?: string | null
+          submitted_date?: string | null
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_ccrs_submission_files_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grow_ccrs_uploads: {
         Row: {
           confirmed_at: string | null
@@ -2251,6 +2512,205 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_chat_channels: {
+        Row: {
+          area_id: string | null
+          channel_type: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          facility_id: string | null
+          grow_cycle_id: string | null
+          id: string
+          is_archived: boolean | null
+          name: string
+          org_id: string
+        }
+        Insert: {
+          area_id?: string | null
+          channel_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          facility_id?: string | null
+          grow_cycle_id?: string | null
+          id?: string
+          is_archived?: boolean | null
+          name: string
+          org_id: string
+        }
+        Update: {
+          area_id?: string | null
+          channel_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          facility_id?: string | null
+          grow_cycle_id?: string | null
+          id?: string
+          is_archived?: boolean | null
+          name?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_chat_channels_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "grow_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_chat_channels_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "grow_facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_chat_channels_grow_cycle_id_fkey"
+            columns: ["grow_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "grow_cycle_analytics"
+            referencedColumns: ["cycle_id"]
+          },
+          {
+            foreignKeyName: "grow_chat_channels_grow_cycle_id_fkey"
+            columns: ["grow_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "grow_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_chat_channels_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_chat_members: {
+        Row: {
+          channel_id: string
+          id: string
+          joined_at: string | null
+          last_read_at: string | null
+          notification_preference: string | null
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          id?: string
+          joined_at?: string | null
+          last_read_at?: string | null
+          notification_preference?: string | null
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          id?: string
+          joined_at?: string | null
+          last_read_at?: string | null
+          notification_preference?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_chat_members_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "grow_chat_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_chat_messages: {
+        Row: {
+          attachments: Json | null
+          channel_id: string
+          content: string
+          created_at: string | null
+          deleted_at: string | null
+          edited_at: string | null
+          id: string
+          mentioned_users: string[] | null
+          message_type: string | null
+          reply_to_id: string | null
+          user_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          channel_id: string
+          content: string
+          created_at?: string | null
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          mentioned_users?: string[] | null
+          message_type?: string | null
+          reply_to_id?: string | null
+          user_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          channel_id?: string
+          content?: string
+          created_at?: string | null
+          deleted_at?: string | null
+          edited_at?: string | null
+          id?: string
+          mentioned_users?: string[] | null
+          message_type?: string | null
+          reply_to_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_chat_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "grow_chat_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_chat_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "grow_chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_chat_read_receipts: {
+        Row: {
+          id: string
+          message_id: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_chat_read_receipts_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "grow_chat_messages"
             referencedColumns: ["id"]
           },
         ]
@@ -2462,8 +2922,12 @@ export type Database = {
       grow_disposals: {
         Row: {
           batch_id: string | null
+          ccrs_created_by_username: string | null
+          ccrs_destruction_method: string | null
+          ccrs_destruction_reason: string | null
           ccrs_reported: boolean | null
           ccrs_reported_at: string | null
+          ccrs_updated_by_username: string | null
           created_at: string | null
           created_by: string | null
           destroyed_at: string | null
@@ -2492,8 +2956,12 @@ export type Database = {
         }
         Insert: {
           batch_id?: string | null
+          ccrs_created_by_username?: string | null
+          ccrs_destruction_method?: string | null
+          ccrs_destruction_reason?: string | null
           ccrs_reported?: boolean | null
           ccrs_reported_at?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           destroyed_at?: string | null
@@ -2522,8 +2990,12 @@ export type Database = {
         }
         Update: {
           batch_id?: string | null
+          ccrs_created_by_username?: string | null
+          ccrs_destruction_method?: string | null
+          ccrs_destruction_reason?: string | null
           ccrs_reported?: boolean | null
           ccrs_reported_at?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           destroyed_at?: string | null
@@ -2584,6 +3056,81 @@ export type Database = {
             columns: ["witness_employee_id"]
             isOneToOne: false
             referencedRelation: "grow_employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_documents: {
+        Row: {
+          created_at: string | null
+          document_category: string | null
+          entity_id: string | null
+          entity_type: string | null
+          expires_at: string | null
+          file_size_bytes: number | null
+          file_type: string | null
+          file_url: string | null
+          folder_id: string | null
+          id: string
+          is_folder: boolean | null
+          mime_type: string | null
+          name: string
+          org_id: string
+          tags: string[] | null
+          updated_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_category?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          expires_at?: string | null
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          folder_id?: string | null
+          id?: string
+          is_folder?: boolean | null
+          mime_type?: string | null
+          name: string
+          org_id: string
+          tags?: string[] | null
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_category?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          expires_at?: string | null
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          folder_id?: string | null
+          id?: string
+          is_folder?: boolean | null
+          mime_type?: string | null
+          name?: string
+          org_id?: string
+          tags?: string[] | null
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_grow_documents_folder"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "grow_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_documents_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -3058,6 +3605,100 @@ export type Database = {
           },
         ]
       }
+      grow_hardware_devices: {
+        Row: {
+          api_endpoint: string | null
+          api_key_encrypted: string | null
+          assigned_to_area_id: string | null
+          connection_type: string | null
+          created_at: string | null
+          device_type: string | null
+          facility_id: string | null
+          id: string
+          integration_type: string | null
+          ip_address: string | null
+          is_active: boolean | null
+          last_ping_at: string | null
+          last_reading_at: string | null
+          mac_address: string | null
+          manufacturer: string | null
+          model: string | null
+          notes: string | null
+          org_id: string
+          serial_number: string | null
+          updated_at: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          api_endpoint?: string | null
+          api_key_encrypted?: string | null
+          assigned_to_area_id?: string | null
+          connection_type?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          facility_id?: string | null
+          id?: string
+          integration_type?: string | null
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_ping_at?: string | null
+          last_reading_at?: string | null
+          mac_address?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          notes?: string | null
+          org_id: string
+          serial_number?: string | null
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          api_endpoint?: string | null
+          api_key_encrypted?: string | null
+          assigned_to_area_id?: string | null
+          connection_type?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          facility_id?: string | null
+          id?: string
+          integration_type?: string | null
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_ping_at?: string | null
+          last_reading_at?: string | null
+          mac_address?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          notes?: string | null
+          org_id?: string
+          serial_number?: string | null
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_hardware_devices_assigned_to_area_id_fkey"
+            columns: ["assigned_to_area_id"]
+            isOneToOne: false
+            referencedRelation: "grow_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_hardware_devices_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "grow_facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_hardware_devices_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grow_harvest_plants: {
         Row: {
           created_at: string | null
@@ -3100,6 +3741,8 @@ export type Database = {
       grow_harvests: {
         Row: {
           area_id: string | null
+          ccrs_created_by_username: string | null
+          ccrs_updated_by_username: string | null
           completed_at: string | null
           created_at: string | null
           created_by: string | null
@@ -3121,6 +3764,8 @@ export type Database = {
         }
         Insert: {
           area_id?: string | null
+          ccrs_created_by_username?: string | null
+          ccrs_updated_by_username?: string | null
           completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -3142,6 +3787,8 @@ export type Database = {
         }
         Update: {
           area_id?: string | null
+          ccrs_created_by_username?: string | null
+          ccrs_updated_by_username?: string | null
           completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -3168,6 +3815,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "grow_areas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_harvests_grow_cycle_id_fkey"
+            columns: ["grow_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "grow_cycle_analytics"
+            referencedColumns: ["cycle_id"]
           },
           {
             foreignKeyName: "grow_harvests_grow_cycle_id_fkey"
@@ -3238,6 +3892,72 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "grow_in_app_notifications_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_inventory_adjustments: {
+        Row: {
+          adjusted_by: string | null
+          adjustment_date: string
+          adjustment_detail: string | null
+          adjustment_reason: string
+          batch_id: string
+          ccrs_created_by_username: string | null
+          ccrs_reported: boolean | null
+          ccrs_reported_at: string | null
+          ccrs_updated_by_username: string | null
+          created_at: string | null
+          external_id: string
+          id: string
+          org_id: string
+          quantity_delta: number
+        }
+        Insert: {
+          adjusted_by?: string | null
+          adjustment_date: string
+          adjustment_detail?: string | null
+          adjustment_reason: string
+          batch_id: string
+          ccrs_created_by_username?: string | null
+          ccrs_reported?: boolean | null
+          ccrs_reported_at?: string | null
+          ccrs_updated_by_username?: string | null
+          created_at?: string | null
+          external_id: string
+          id?: string
+          org_id: string
+          quantity_delta: number
+        }
+        Update: {
+          adjusted_by?: string | null
+          adjustment_date?: string
+          adjustment_detail?: string | null
+          adjustment_reason?: string
+          batch_id?: string
+          ccrs_created_by_username?: string | null
+          ccrs_reported?: boolean | null
+          ccrs_reported_at?: string | null
+          ccrs_updated_by_username?: string | null
+          created_at?: string | null
+          external_id?: string
+          id?: string
+          org_id?: string
+          quantity_delta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_inventory_adjustments_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "grow_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_inventory_adjustments_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -3410,11 +4130,75 @@ export type Database = {
             foreignKeyName: "grow_irrigation_logs_grow_cycle_id_fkey"
             columns: ["grow_cycle_id"]
             isOneToOne: false
+            referencedRelation: "grow_cycle_analytics"
+            referencedColumns: ["cycle_id"]
+          },
+          {
+            foreignKeyName: "grow_irrigation_logs_grow_cycle_id_fkey"
+            columns: ["grow_cycle_id"]
+            isOneToOne: false
             referencedRelation: "grow_cycles"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "grow_irrigation_logs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_kiosk_sessions: {
+        Row: {
+          allowed_actions: string[] | null
+          created_at: string | null
+          created_by: string | null
+          device_id: string | null
+          device_name: string | null
+          expires_at: string | null
+          facility_id: string | null
+          id: string
+          org_id: string
+          pin_code: string | null
+          session_token: string | null
+        }
+        Insert: {
+          allowed_actions?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          device_id?: string | null
+          device_name?: string | null
+          expires_at?: string | null
+          facility_id?: string | null
+          id?: string
+          org_id: string
+          pin_code?: string | null
+          session_token?: string | null
+        }
+        Update: {
+          allowed_actions?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          device_id?: string | null
+          device_name?: string | null
+          expires_at?: string | null
+          facility_id?: string | null
+          id?: string
+          org_id?: string
+          pin_code?: string | null
+          session_token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_kiosk_sessions_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "grow_facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_kiosk_sessions_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -3468,6 +4252,116 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_logs: {
+        Row: {
+          area_id: string | null
+          batch_id: string | null
+          content: string
+          created_at: string | null
+          grow_cycle_id: string | null
+          harvest_id: string | null
+          id: string
+          log_type: string | null
+          measurements: Json | null
+          org_id: string
+          photo_urls: string[] | null
+          plant_id: string | null
+          recorded_at: string | null
+          recorded_by: string | null
+          tags: string[] | null
+          title: string | null
+          video_url: string | null
+        }
+        Insert: {
+          area_id?: string | null
+          batch_id?: string | null
+          content: string
+          created_at?: string | null
+          grow_cycle_id?: string | null
+          harvest_id?: string | null
+          id?: string
+          log_type?: string | null
+          measurements?: Json | null
+          org_id: string
+          photo_urls?: string[] | null
+          plant_id?: string | null
+          recorded_at?: string | null
+          recorded_by?: string | null
+          tags?: string[] | null
+          title?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          area_id?: string | null
+          batch_id?: string | null
+          content?: string
+          created_at?: string | null
+          grow_cycle_id?: string | null
+          harvest_id?: string | null
+          id?: string
+          log_type?: string | null
+          measurements?: Json | null
+          org_id?: string
+          photo_urls?: string[] | null
+          plant_id?: string | null
+          recorded_at?: string | null
+          recorded_by?: string | null
+          tags?: string[] | null
+          title?: string | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_logs_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "grow_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_logs_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "grow_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_logs_grow_cycle_id_fkey"
+            columns: ["grow_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "grow_cycle_analytics"
+            referencedColumns: ["cycle_id"]
+          },
+          {
+            foreignKeyName: "grow_logs_grow_cycle_id_fkey"
+            columns: ["grow_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "grow_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_logs_harvest_id_fkey"
+            columns: ["harvest_id"]
+            isOneToOne: false
+            referencedRelation: "grow_harvests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_logs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_logs_plant_id_fkey"
+            columns: ["plant_id"]
+            isOneToOne: false
+            referencedRelation: "grow_plants"
             referencedColumns: ["id"]
           },
         ]
@@ -3537,8 +4431,10 @@ export type Database = {
         Row: {
           arrival_datetime: string | null
           ccrs_confirmed_at: string | null
+          ccrs_created_by_username: string | null
           ccrs_manifest_pdf_url: string | null
           ccrs_submitted_at: string | null
+          ccrs_updated_by_username: string | null
           created_at: string | null
           created_by: string | null
           departure_datetime: string | null
@@ -3580,8 +4476,10 @@ export type Database = {
         Insert: {
           arrival_datetime?: string | null
           ccrs_confirmed_at?: string | null
+          ccrs_created_by_username?: string | null
           ccrs_manifest_pdf_url?: string | null
           ccrs_submitted_at?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           departure_datetime?: string | null
@@ -3623,8 +4521,10 @@ export type Database = {
         Update: {
           arrival_datetime?: string | null
           ccrs_confirmed_at?: string | null
+          ccrs_created_by_username?: string | null
           ccrs_manifest_pdf_url?: string | null
           ccrs_submitted_at?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           departure_datetime?: string | null
@@ -3697,6 +4597,74 @@ export type Database = {
             columns: ["vehicle_id"]
             isOneToOne: false
             referencedRelation: "grow_vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_marketplace_menus: {
+        Row: {
+          banner_url: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          description: string | null
+          featured_product_ids: string[] | null
+          id: string
+          is_active: boolean | null
+          is_public: boolean | null
+          name: string
+          org_id: string
+          password_hash: string | null
+          password_protected: boolean | null
+          public_slug: string | null
+          updated_at: string | null
+          visible_to_account_groups: string[] | null
+          visible_to_accounts: string[] | null
+        }
+        Insert: {
+          banner_url?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          description?: string | null
+          featured_product_ids?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          is_public?: boolean | null
+          name: string
+          org_id: string
+          password_hash?: string | null
+          password_protected?: boolean | null
+          public_slug?: string | null
+          updated_at?: string | null
+          visible_to_account_groups?: string[] | null
+          visible_to_accounts?: string[] | null
+        }
+        Update: {
+          banner_url?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          description?: string | null
+          featured_product_ids?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          is_public?: boolean | null
+          name?: string
+          org_id?: string
+          password_hash?: string | null
+          password_protected?: boolean | null
+          public_slug?: string | null
+          updated_at?: string | null
+          visible_to_account_groups?: string[] | null
+          visible_to_accounts?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_marketplace_menus_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -3857,6 +4825,13 @@ export type Database = {
             foreignKeyName: "grow_nutrient_applications_grow_cycle_id_fkey"
             columns: ["grow_cycle_id"]
             isOneToOne: false
+            referencedRelation: "grow_cycle_analytics"
+            referencedColumns: ["cycle_id"]
+          },
+          {
+            foreignKeyName: "grow_nutrient_applications_grow_cycle_id_fkey"
+            columns: ["grow_cycle_id"]
+            isOneToOne: false
             referencedRelation: "grow_cycles"
             referencedColumns: ["id"]
           },
@@ -3973,35 +4948,47 @@ export type Database = {
       }
       grow_order_items: {
         Row: {
+          discount: number | null
           discount_amount: number | null
           id: string
           line_total: number
           notes: string | null
           order_id: string
+          other_tax: number | null
           product_id: string
           quantity: number
+          sale_detail_external_identifier: string | null
+          sales_tax: number | null
           sort_order: number | null
           unit_price: number
         }
         Insert: {
+          discount?: number | null
           discount_amount?: number | null
           id?: string
           line_total: number
           notes?: string | null
           order_id: string
+          other_tax?: number | null
           product_id: string
           quantity: number
+          sale_detail_external_identifier?: string | null
+          sales_tax?: number | null
           sort_order?: number | null
           unit_price: number
         }
         Update: {
+          discount?: number | null
           discount_amount?: number | null
           id?: string
           line_total?: number
           notes?: string | null
           order_id?: string
+          other_tax?: number | null
           product_id?: string
           quantity?: number
+          sale_detail_external_identifier?: string | null
+          sales_tax?: number | null
           sort_order?: number | null
           unit_price?: number
         }
@@ -4025,6 +5012,8 @@ export type Database = {
       grow_orders: {
         Row: {
           account_id: string
+          ccrs_created_by_username: string | null
+          ccrs_updated_by_username: string | null
           charges_total: number | null
           completed_at: string | null
           created_at: string | null
@@ -4038,6 +5027,8 @@ export type Database = {
           order_number: string
           org_id: string
           released_at: string | null
+          sale_external_identifier: string | null
+          sale_type: string | null
           status: string | null
           submitted_at: string | null
           subtotal: number | null
@@ -4047,6 +5038,8 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          ccrs_created_by_username?: string | null
+          ccrs_updated_by_username?: string | null
           charges_total?: number | null
           completed_at?: string | null
           created_at?: string | null
@@ -4060,6 +5053,8 @@ export type Database = {
           order_number: string
           org_id: string
           released_at?: string | null
+          sale_external_identifier?: string | null
+          sale_type?: string | null
           status?: string | null
           submitted_at?: string | null
           subtotal?: number | null
@@ -4069,6 +5064,8 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          ccrs_created_by_username?: string | null
+          ccrs_updated_by_username?: string | null
           charges_total?: number | null
           completed_at?: string | null
           created_at?: string | null
@@ -4082,6 +5079,8 @@ export type Database = {
           order_number?: string
           org_id?: string
           released_at?: string | null
+          sale_external_identifier?: string | null
+          sale_type?: string | null
           status?: string | null
           submitted_at?: string | null
           subtotal?: number | null
@@ -4493,6 +5492,13 @@ export type Database = {
             foreignKeyName: "grow_pest_logs_grow_cycle_id_fkey"
             columns: ["grow_cycle_id"]
             isOneToOne: false
+            referencedRelation: "grow_cycle_analytics"
+            referencedColumns: ["cycle_id"]
+          },
+          {
+            foreignKeyName: "grow_pest_logs_grow_cycle_id_fkey"
+            columns: ["grow_cycle_id"]
+            isOneToOne: false
             referencedRelation: "grow_cycles"
             referencedColumns: ["id"]
           },
@@ -4512,23 +5518,119 @@ export type Database = {
           },
         ]
       }
+      grow_phenotypes: {
+        Row: {
+          cbd_avg: number | null
+          created_at: string | null
+          created_by: string | null
+          flower_days_avg: number | null
+          id: string
+          is_keeper: boolean | null
+          is_retired: boolean | null
+          mother_plant_id: string | null
+          notes: string | null
+          observations: Json | null
+          org_id: string
+          pheno_name: string | null
+          pheno_number: string
+          photo_urls: string[] | null
+          strain_id: string
+          thc_avg: number | null
+          total_terpenes_avg: number | null
+          updated_at: string | null
+          yield_avg_grams: number | null
+        }
+        Insert: {
+          cbd_avg?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          flower_days_avg?: number | null
+          id?: string
+          is_keeper?: boolean | null
+          is_retired?: boolean | null
+          mother_plant_id?: string | null
+          notes?: string | null
+          observations?: Json | null
+          org_id: string
+          pheno_name?: string | null
+          pheno_number: string
+          photo_urls?: string[] | null
+          strain_id: string
+          thc_avg?: number | null
+          total_terpenes_avg?: number | null
+          updated_at?: string | null
+          yield_avg_grams?: number | null
+        }
+        Update: {
+          cbd_avg?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          flower_days_avg?: number | null
+          id?: string
+          is_keeper?: boolean | null
+          is_retired?: boolean | null
+          mother_plant_id?: string | null
+          notes?: string | null
+          observations?: Json | null
+          org_id?: string
+          pheno_name?: string | null
+          pheno_number?: string
+          photo_urls?: string[] | null
+          strain_id?: string
+          thc_avg?: number | null
+          total_terpenes_avg?: number | null
+          updated_at?: string | null
+          yield_avg_grams?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_phenotypes_mother_plant_id_fkey"
+            columns: ["mother_plant_id"]
+            isOneToOne: false
+            referencedRelation: "grow_plants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_phenotypes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_phenotypes_strain_id_fkey"
+            columns: ["strain_id"]
+            isOneToOne: false
+            referencedRelation: "grow_strains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grow_plants: {
         Row: {
           area_id: string | null
+          ccrs_created_by_username: string | null
+          ccrs_growth_stage: string | null
+          ccrs_plant_state: string | null
+          ccrs_updated_by_username: string | null
           created_at: string | null
           created_by: string | null
           destroyed_at: string | null
           destruction_reason: string | null
           external_id: string
           grow_cycle_id: string | null
+          harvest_cycle_months: number | null
           harvest_date: string | null
           id: string
           is_mother: boolean | null
+          is_mother_plant: boolean | null
           mother_plant_id: string | null
           notes: string | null
           org_id: string
           phase: string
           phase_changed_at: string | null
+          phenotype_id: string | null
+          plant_identifier: string | null
           source_type: string | null
           strain_id: string
           updated_at: string | null
@@ -4536,20 +5638,28 @@ export type Database = {
         }
         Insert: {
           area_id?: string | null
+          ccrs_created_by_username?: string | null
+          ccrs_growth_stage?: string | null
+          ccrs_plant_state?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           destroyed_at?: string | null
           destruction_reason?: string | null
           external_id: string
           grow_cycle_id?: string | null
+          harvest_cycle_months?: number | null
           harvest_date?: string | null
           id?: string
           is_mother?: boolean | null
+          is_mother_plant?: boolean | null
           mother_plant_id?: string | null
           notes?: string | null
           org_id: string
           phase?: string
           phase_changed_at?: string | null
+          phenotype_id?: string | null
+          plant_identifier?: string | null
           source_type?: string | null
           strain_id: string
           updated_at?: string | null
@@ -4557,20 +5667,28 @@ export type Database = {
         }
         Update: {
           area_id?: string | null
+          ccrs_created_by_username?: string | null
+          ccrs_growth_stage?: string | null
+          ccrs_plant_state?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           destroyed_at?: string | null
           destruction_reason?: string | null
           external_id?: string
           grow_cycle_id?: string | null
+          harvest_cycle_months?: number | null
           harvest_date?: string | null
           id?: string
           is_mother?: boolean | null
+          is_mother_plant?: boolean | null
           mother_plant_id?: string | null
           notes?: string | null
           org_id?: string
           phase?: string
           phase_changed_at?: string | null
+          phenotype_id?: string | null
+          plant_identifier?: string | null
           source_type?: string | null
           strain_id?: string
           updated_at?: string | null
@@ -4583,6 +5701,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "grow_areas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_plants_grow_cycle_id_fkey"
+            columns: ["grow_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "grow_cycle_analytics"
+            referencedColumns: ["cycle_id"]
           },
           {
             foreignKeyName: "grow_plants_grow_cycle_id_fkey"
@@ -4603,6 +5728,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_plants_phenotype_id_fkey"
+            columns: ["phenotype_id"]
+            isOneToOne: false
+            referencedRelation: "grow_phenotypes"
             referencedColumns: ["id"]
           },
           {
@@ -4889,6 +6021,10 @@ export type Database = {
       grow_products: {
         Row: {
           category: string
+          ccrs_created_by_username: string | null
+          ccrs_inventory_category: string | null
+          ccrs_inventory_type: string | null
+          ccrs_updated_by_username: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -4910,6 +6046,10 @@ export type Database = {
         }
         Insert: {
           category: string
+          ccrs_created_by_username?: string | null
+          ccrs_inventory_category?: string | null
+          ccrs_inventory_type?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -4931,6 +6071,10 @@ export type Database = {
         }
         Update: {
           category?: string
+          ccrs_created_by_username?: string | null
+          ccrs_inventory_category?: string | null
+          ccrs_inventory_type?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -5045,6 +6189,8 @@ export type Database = {
           cbd_total_pct: number | null
           cbg_pct: number | null
           cbn_pct: number | null
+          ccrs_created_by_username: string | null
+          ccrs_updated_by_username: string | null
           coa_urls: string[] | null
           created_at: string | null
           created_by: string | null
@@ -5055,6 +6201,7 @@ export type Database = {
           id: string
           lab_license_number: string | null
           lab_name: string | null
+          lab_test_status: string | null
           microbials_pass: boolean | null
           moisture_pct: number | null
           mycotoxins_pass: boolean | null
@@ -5068,6 +6215,8 @@ export type Database = {
           source_type: string | null
           terpene_data: Json | null
           test_date: string
+          test_name: string | null
+          test_value: string | null
           thc_a_pct: number | null
           thc_delta9_pct: number | null
           thc_total_pct: number | null
@@ -5082,6 +6231,8 @@ export type Database = {
           cbd_total_pct?: number | null
           cbg_pct?: number | null
           cbn_pct?: number | null
+          ccrs_created_by_username?: string | null
+          ccrs_updated_by_username?: string | null
           coa_urls?: string[] | null
           created_at?: string | null
           created_by?: string | null
@@ -5092,6 +6243,7 @@ export type Database = {
           id?: string
           lab_license_number?: string | null
           lab_name?: string | null
+          lab_test_status?: string | null
           microbials_pass?: boolean | null
           moisture_pct?: number | null
           mycotoxins_pass?: boolean | null
@@ -5105,6 +6257,8 @@ export type Database = {
           source_type?: string | null
           terpene_data?: Json | null
           test_date: string
+          test_name?: string | null
+          test_value?: string | null
           thc_a_pct?: number | null
           thc_delta9_pct?: number | null
           thc_total_pct?: number | null
@@ -5119,6 +6273,8 @@ export type Database = {
           cbd_total_pct?: number | null
           cbg_pct?: number | null
           cbn_pct?: number | null
+          ccrs_created_by_username?: string | null
+          ccrs_updated_by_username?: string | null
           coa_urls?: string[] | null
           created_at?: string | null
           created_by?: string | null
@@ -5129,6 +6285,7 @@ export type Database = {
           id?: string
           lab_license_number?: string | null
           lab_name?: string | null
+          lab_test_status?: string | null
           microbials_pass?: boolean | null
           moisture_pct?: number | null
           mycotoxins_pass?: boolean | null
@@ -5142,6 +6299,8 @@ export type Database = {
           source_type?: string | null
           terpene_data?: Json | null
           test_date?: string
+          test_name?: string | null
+          test_value?: string | null
           thc_a_pct?: number | null
           thc_delta9_pct?: number | null
           thc_total_pct?: number | null
@@ -5253,6 +6412,151 @@ export type Database = {
           },
         ]
       }
+      grow_recall_notifications: {
+        Row: {
+          account_id: string | null
+          acknowledged_at: string | null
+          batch_id: string | null
+          created_at: string | null
+          id: string
+          notification_method: string | null
+          notified_at: string | null
+          order_id: string | null
+          quantity_destroyed: number | null
+          quantity_returned: number | null
+          recall_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          acknowledged_at?: string | null
+          batch_id?: string | null
+          created_at?: string | null
+          id?: string
+          notification_method?: string | null
+          notified_at?: string | null
+          order_id?: string | null
+          quantity_destroyed?: number | null
+          quantity_returned?: number | null
+          recall_id: string
+        }
+        Update: {
+          account_id?: string | null
+          acknowledged_at?: string | null
+          batch_id?: string | null
+          created_at?: string | null
+          id?: string
+          notification_method?: string | null
+          notified_at?: string | null
+          order_id?: string | null
+          quantity_destroyed?: number | null
+          quantity_returned?: number | null
+          recall_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_recall_notifications_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "grow_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_recall_notifications_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "grow_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_recall_notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "grow_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_recall_notifications_recall_id_fkey"
+            columns: ["recall_id"]
+            isOneToOne: false
+            referencedRelation: "grow_recalls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_recalls: {
+        Row: {
+          affected_batch_ids: string[] | null
+          affected_product_ids: string[] | null
+          affected_strain_ids: string[] | null
+          created_at: string | null
+          detailed_description: string | null
+          id: string
+          initiated_by: string | null
+          org_id: string
+          public_notice_issued: boolean | null
+          public_notice_url: string | null
+          reason: string
+          recall_number: string
+          recall_type: string | null
+          resolved_at: string | null
+          severity: string | null
+          status: string | null
+          updated_at: string | null
+          wslcb_notified: boolean | null
+          wslcb_notified_at: string | null
+        }
+        Insert: {
+          affected_batch_ids?: string[] | null
+          affected_product_ids?: string[] | null
+          affected_strain_ids?: string[] | null
+          created_at?: string | null
+          detailed_description?: string | null
+          id?: string
+          initiated_by?: string | null
+          org_id: string
+          public_notice_issued?: boolean | null
+          public_notice_url?: string | null
+          reason: string
+          recall_number: string
+          recall_type?: string | null
+          resolved_at?: string | null
+          severity?: string | null
+          status?: string | null
+          updated_at?: string | null
+          wslcb_notified?: boolean | null
+          wslcb_notified_at?: string | null
+        }
+        Update: {
+          affected_batch_ids?: string[] | null
+          affected_product_ids?: string[] | null
+          affected_strain_ids?: string[] | null
+          created_at?: string | null
+          detailed_description?: string | null
+          id?: string
+          initiated_by?: string | null
+          org_id?: string
+          public_notice_issued?: boolean | null
+          public_notice_url?: string | null
+          reason?: string
+          recall_number?: string
+          recall_type?: string | null
+          resolved_at?: string | null
+          severity?: string | null
+          status?: string | null
+          updated_at?: string | null
+          wslcb_notified?: boolean | null
+          wslcb_notified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_recalls_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grow_recipes: {
         Row: {
           bom_id: string | null
@@ -5333,6 +6637,60 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_report_runs: {
+        Row: {
+          completed_at: string | null
+          error_message: string | null
+          file_url: string | null
+          id: string
+          report_id: string
+          row_count: number | null
+          run_by: string | null
+          scheduled_report_id: string | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          error_message?: string | null
+          file_url?: string | null
+          id?: string
+          report_id: string
+          row_count?: number | null
+          run_by?: string | null
+          scheduled_report_id?: string | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          error_message?: string | null
+          file_url?: string | null
+          id?: string
+          report_id?: string
+          row_count?: number | null
+          run_by?: string | null
+          scheduled_report_id?: string | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_report_runs_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "grow_saved_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_report_runs_scheduled_report_id_fkey"
+            columns: ["scheduled_report_id"]
+            isOneToOne: false
+            referencedRelation: "grow_scheduled_reports"
             referencedColumns: ["id"]
           },
         ]
@@ -5480,6 +6838,68 @@ export type Database = {
           },
         ]
       }
+      grow_saved_reports: {
+        Row: {
+          chart_config: Json | null
+          columns_config: Json | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          filters_config: Json | null
+          id: string
+          is_favorite: boolean | null
+          is_system: boolean | null
+          name: string
+          org_id: string
+          query_config: Json
+          report_category: string | null
+          report_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          chart_config?: Json | null
+          columns_config?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          filters_config?: Json | null
+          id?: string
+          is_favorite?: boolean | null
+          is_system?: boolean | null
+          name: string
+          org_id: string
+          query_config: Json
+          report_category?: string | null
+          report_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          chart_config?: Json | null
+          columns_config?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          filters_config?: Json | null
+          id?: string
+          is_favorite?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          org_id?: string
+          query_config?: Json
+          report_category?: string | null
+          report_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_saved_reports_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grow_saved_views: {
         Row: {
           created_at: string | null
@@ -5523,6 +6943,124 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_scale_readings: {
+        Row: {
+          device_id: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          operator_employee_id: string | null
+          operator_user_id: string | null
+          org_id: string
+          recorded_at: string | null
+          weight_grams: number
+        }
+        Insert: {
+          device_id?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          operator_employee_id?: string | null
+          operator_user_id?: string | null
+          org_id: string
+          recorded_at?: string | null
+          weight_grams: number
+        }
+        Update: {
+          device_id?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          operator_employee_id?: string | null
+          operator_user_id?: string | null
+          org_id?: string
+          recorded_at?: string | null
+          weight_grams?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_scale_readings_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "grow_hardware_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_scale_readings_operator_employee_id_fkey"
+            columns: ["operator_employee_id"]
+            isOneToOne: false
+            referencedRelation: "grow_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_scale_readings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_scheduled_reports: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          format: string | null
+          id: string
+          is_active: boolean | null
+          last_run_at: string | null
+          name: string
+          next_run_at: string | null
+          org_id: string
+          recipient_emails: string[] | null
+          report_id: string
+          schedule_cron: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          format?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          name: string
+          next_run_at?: string | null
+          org_id: string
+          recipient_emails?: string[] | null
+          report_id: string
+          schedule_cron: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          format?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          name?: string
+          next_run_at?: string | null
+          org_id?: string
+          recipient_emails?: string[] | null
+          report_id?: string
+          schedule_cron?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_scheduled_reports_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_scheduled_reports_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "grow_saved_reports"
             referencedColumns: ["id"]
           },
         ]
@@ -5745,6 +7283,8 @@ export type Database = {
           average_flower_days: number | null
           average_thc_pct: number | null
           breeder: string | null
+          ccrs_created_by_username: string | null
+          ccrs_updated_by_username: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -5766,6 +7306,8 @@ export type Database = {
           average_flower_days?: number | null
           average_thc_pct?: number | null
           breeder?: string | null
+          ccrs_created_by_username?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -5787,6 +7329,8 @@ export type Database = {
           average_flower_days?: number | null
           average_thc_pct?: number | null
           breeder?: string | null
+          ccrs_created_by_username?: string | null
+          ccrs_updated_by_username?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -5886,6 +7430,361 @@ export type Database = {
           },
         ]
       }
+      grow_task_comments: {
+        Row: {
+          comment: string
+          created_at: string | null
+          id: string
+          photo_urls: string[] | null
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string | null
+          id?: string
+          photo_urls?: string[] | null
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string | null
+          id?: string
+          photo_urls?: string[] | null
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "grow_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_task_templates: {
+        Row: {
+          checklist_items: Json | null
+          created_at: string | null
+          created_by: string | null
+          default_assignees: string[] | null
+          description: string | null
+          estimated_duration_minutes: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          org_id: string
+          recurrence_config: Json | null
+          recurrence_type: string | null
+          required_permissions: string[] | null
+          sop_id: string | null
+          task_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          checklist_items?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          default_assignees?: string[] | null
+          description?: string | null
+          estimated_duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          org_id: string
+          recurrence_config?: Json | null
+          recurrence_type?: string | null
+          required_permissions?: string[] | null
+          sop_id?: string | null
+          task_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          checklist_items?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          default_assignees?: string[] | null
+          description?: string | null
+          estimated_duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          org_id?: string
+          recurrence_config?: Json | null
+          recurrence_type?: string | null
+          required_permissions?: string[] | null
+          sop_id?: string | null
+          task_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_task_templates_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_task_templates_sop_id_fkey"
+            columns: ["sop_id"]
+            isOneToOne: false
+            referencedRelation: "grow_sops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_tasks: {
+        Row: {
+          actual_duration_minutes: number | null
+          area_id: string | null
+          assigned_to_employee_id: string | null
+          assigned_to_team: string[] | null
+          assigned_to_user_id: string | null
+          batch_id: string | null
+          blocking_tasks: string[] | null
+          checklist_progress: Json | null
+          completed_at: string | null
+          completion_notes: string | null
+          completion_photos: string[] | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          grow_cycle_id: string | null
+          harvest_id: string | null
+          id: string
+          org_id: string
+          plant_id: string | null
+          priority: string | null
+          production_run_id: string | null
+          scheduled_end: string | null
+          scheduled_start: string | null
+          sop_id: string | null
+          started_at: string | null
+          status: string | null
+          task_type: string | null
+          template_id: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          actual_duration_minutes?: number | null
+          area_id?: string | null
+          assigned_to_employee_id?: string | null
+          assigned_to_team?: string[] | null
+          assigned_to_user_id?: string | null
+          batch_id?: string | null
+          blocking_tasks?: string[] | null
+          checklist_progress?: Json | null
+          completed_at?: string | null
+          completion_notes?: string | null
+          completion_photos?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          grow_cycle_id?: string | null
+          harvest_id?: string | null
+          id?: string
+          org_id: string
+          plant_id?: string | null
+          priority?: string | null
+          production_run_id?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          sop_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          task_type?: string | null
+          template_id?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          actual_duration_minutes?: number | null
+          area_id?: string | null
+          assigned_to_employee_id?: string | null
+          assigned_to_team?: string[] | null
+          assigned_to_user_id?: string | null
+          batch_id?: string | null
+          blocking_tasks?: string[] | null
+          checklist_progress?: Json | null
+          completed_at?: string | null
+          completion_notes?: string | null
+          completion_photos?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          grow_cycle_id?: string | null
+          harvest_id?: string | null
+          id?: string
+          org_id?: string
+          plant_id?: string | null
+          priority?: string | null
+          production_run_id?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          sop_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          task_type?: string | null
+          template_id?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_tasks_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "grow_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_tasks_assigned_to_employee_id_fkey"
+            columns: ["assigned_to_employee_id"]
+            isOneToOne: false
+            referencedRelation: "grow_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_tasks_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "grow_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_tasks_grow_cycle_id_fkey"
+            columns: ["grow_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "grow_cycle_analytics"
+            referencedColumns: ["cycle_id"]
+          },
+          {
+            foreignKeyName: "grow_tasks_grow_cycle_id_fkey"
+            columns: ["grow_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "grow_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_tasks_harvest_id_fkey"
+            columns: ["harvest_id"]
+            isOneToOne: false
+            referencedRelation: "grow_harvests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_tasks_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_tasks_plant_id_fkey"
+            columns: ["plant_id"]
+            isOneToOne: false
+            referencedRelation: "grow_plants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_tasks_production_run_id_fkey"
+            columns: ["production_run_id"]
+            isOneToOne: false
+            referencedRelation: "grow_production_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_tasks_sop_id_fkey"
+            columns: ["sop_id"]
+            isOneToOne: false
+            referencedRelation: "grow_sops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_tasks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "grow_task_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_time_clock_punches: {
+        Row: {
+          created_at: string | null
+          employee_id: string
+          id: string
+          kiosk_session_id: string | null
+          location_lat: number | null
+          location_lng: number | null
+          org_id: string
+          photo_url: string | null
+          punch_type: string
+          punched_at: string | null
+          time_entry_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          employee_id: string
+          id?: string
+          kiosk_session_id?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          org_id: string
+          photo_url?: string | null
+          punch_type: string
+          punched_at?: string | null
+          time_entry_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          employee_id?: string
+          id?: string
+          kiosk_session_id?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          org_id?: string
+          photo_url?: string | null
+          punch_type?: string
+          punched_at?: string | null
+          time_entry_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_time_clock_punches_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "grow_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_time_clock_punches_kiosk_session_id_fkey"
+            columns: ["kiosk_session_id"]
+            isOneToOne: false
+            referencedRelation: "grow_kiosk_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_time_clock_punches_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_time_clock_punches_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "grow_time_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grow_time_entries: {
         Row: {
           area_id: string | null
@@ -5965,6 +7864,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "grow_employees"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_time_entries_grow_cycle_id_fkey"
+            columns: ["grow_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "grow_cycle_analytics"
+            referencedColumns: ["cycle_id"]
           },
           {
             foreignKeyName: "grow_time_entries_grow_cycle_id_fkey"
@@ -6469,6 +8375,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "grow_areas"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_waste_log_grow_cycle_id_fkey"
+            columns: ["grow_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "grow_cycle_analytics"
+            referencedColumns: ["cycle_id"]
           },
           {
             foreignKeyName: "grow_waste_log_grow_cycle_id_fkey"
@@ -9775,6 +11688,51 @@ export type Database = {
       }
     }
     Views: {
+      grow_cycle_analytics: {
+        Row: {
+          actual_harvest_date: string | null
+          area_id: string | null
+          area_name: string | null
+          canopy_sqft: number | null
+          cycle_id: string | null
+          grams_per_day: number | null
+          grams_per_plant: number | null
+          grams_per_sqft: number | null
+          name: string | null
+          org_id: string | null
+          plant_count: number | null
+          start_date: string | null
+          strain_id: string | null
+          strain_name: string | null
+          total_days: number | null
+          total_dry_weight_grams: number | null
+          total_waste_weight_grams: number | null
+          total_wet_weight_grams: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_cycles_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "grow_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_cycles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grow_cycles_strain_id_fkey"
+            columns: ["strain_id"]
+            isOneToOne: false
+            referencedRelation: "grow_strains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mv_brand_rankings: {
         Row: {
           avg_price: number | null
