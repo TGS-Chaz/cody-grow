@@ -33,6 +33,7 @@ import codyIcon from "@/assets/cody-icon.svg";
 import { Toaster } from "@/components/ui/sonner";
 import AskCody from "@/components/cody/AskCody";
 import CodyContextProvider from "@/components/cody/CodyContextProvider";
+import CommandBar from "@/components/shared/CommandBar";
 
 const navGroups = [
   { label: "Overview", items: [
@@ -311,6 +312,7 @@ export default function AppLayout() {
       </main>
       <Toaster />
       <AskCody />
+      <CommandBar />
     </div>
     </CodyContextProvider>
   );

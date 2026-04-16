@@ -5,10 +5,14 @@ interface EmptyStateProps {
   icon: LucideIcon;
   title: string;
   description: string;
+  primaryAction?: React.ReactNode;
+  secondaryAction?: React.ReactNode;
+  /** @deprecated Use primaryAction instead */
   action?: React.ReactNode;
 }
 
-export default function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
+export default function EmptyState({ icon: Icon, title, description, primaryAction, secondaryAction, action }: EmptyStateProps) {
+  const primary = primaryAction ?? action;
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -24,7 +28,12 @@ export default function EmptyState({ icon: Icon, title, description, action }: E
       </div>
       <h3 className="text-[15px] font-semibold text-foreground mb-1.5">{title}</h3>
       <p className="text-[13px] text-muted-foreground max-w-xs leading-relaxed">{description}</p>
-      {action && <div className="mt-5">{action}</div>}
+      {(primary || secondaryAction) && (
+        <div className="mt-5 flex items-center gap-2">
+          {primary}
+          {secondaryAction}
+        </div>
+      )}
     </motion.div>
   );
 }

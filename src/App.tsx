@@ -14,9 +14,13 @@ import NoAccessPage from "@/pages/auth/NoAccessPage";
 import Dashboard from "@/pages/dashboard/Dashboard";
 import ProfilePage from "@/pages/ProfilePage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
+import SettingsHub from "@/pages/settings/SettingsHub";
+import FacilitiesPage from "@/pages/settings/FacilitiesPage";
+import FacilityDetailPage from "@/pages/settings/FacilityDetailPage";
+import { ShortcutsProvider } from "@/components/shared/KeyboardShortcuts";
 
 function ScrollToTop() {
-  return null; // Will add scroll-to-top behavior later if needed
+  return null;
 }
 
 export default function App() {
@@ -28,49 +32,63 @@ export default function App() {
         <OrgProvider>
         <ThemeProvider>
           <TooltipProvider>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/request-access" element={<RequestAccessPage />} />
-              <Route path="/no-access" element={<NoAccessPage />} />
+            <ShortcutsProvider>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/request-access" element={<RequestAccessPage />} />
+                <Route path="/no-access" element={<NoAccessPage />} />
 
-              {/* Protected routes */}
-              <Route element={<ProtectedRoute />}>
-                <Route element={<AppLayout />}>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/profile" element={<ProfilePage />} />
+                {/* Protected routes */}
+                <Route element={<ProtectedRoute />}>
+                  <Route element={<AppLayout />}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/profile" element={<ProfilePage />} />
 
-                  {/* Cultivation */}
-                  <Route path="/cultivation/plants" element={<PlaceholderPage />} />
-                  <Route path="/cultivation/grow-cycles" element={<PlaceholderPage />} />
-                  <Route path="/cultivation/harvests" element={<PlaceholderPage />} />
+                    {/* Cultivation */}
+                    <Route path="/cultivation/plants" element={<PlaceholderPage />} />
+                    <Route path="/cultivation/grow-cycles" element={<PlaceholderPage />} />
+                    <Route path="/cultivation/harvests" element={<PlaceholderPage />} />
 
-                  {/* Inventory */}
-                  <Route path="/inventory/products" element={<PlaceholderPage />} />
-                  <Route path="/inventory/batches" element={<PlaceholderPage />} />
-                  <Route path="/inventory/lab-testing" element={<PlaceholderPage />} />
-                  <Route path="/inventory/production" element={<PlaceholderPage />} />
+                    {/* Inventory */}
+                    <Route path="/inventory/products" element={<PlaceholderPage />} />
+                    <Route path="/inventory/batches" element={<PlaceholderPage />} />
+                    <Route path="/inventory/lab-testing" element={<PlaceholderPage />} />
+                    <Route path="/inventory/production" element={<PlaceholderPage />} />
 
-                  {/* Sales */}
-                  <Route path="/sales/accounts" element={<PlaceholderPage />} />
-                  <Route path="/sales/orders" element={<PlaceholderPage />} />
-                  <Route path="/sales/fulfillment" element={<PlaceholderPage />} />
+                    {/* Sales */}
+                    <Route path="/sales/accounts" element={<PlaceholderPage />} />
+                    <Route path="/sales/orders" element={<PlaceholderPage />} />
+                    <Route path="/sales/fulfillment" element={<PlaceholderPage />} />
 
-                  {/* Compliance */}
-                  <Route path="/compliance/ccrs" element={<PlaceholderPage />} />
-                  <Route path="/compliance/manifests" element={<PlaceholderPage />} />
+                    {/* Compliance */}
+                    <Route path="/compliance/ccrs" element={<PlaceholderPage />} />
+                    <Route path="/compliance/manifests" element={<PlaceholderPage />} />
 
-                  {/* Settings */}
-                  <Route path="/settings" element={<PlaceholderPage />} />
-                  <Route path="/settings/strains" element={<PlaceholderPage />} />
-                  <Route path="/settings/areas" element={<PlaceholderPage />} />
+                    {/* Settings */}
+                    <Route path="/settings" element={<SettingsHub />} />
+                    <Route path="/settings/facilities" element={<FacilitiesPage />} />
+                    <Route path="/settings/facilities/:id" element={<FacilityDetailPage />} />
+                    {/* Placeholder category routes */}
+                    <Route path="/settings/organization" element={<PlaceholderPage />} />
+                    <Route path="/settings/users" element={<PlaceholderPage />} />
+                    <Route path="/settings/employees" element={<PlaceholderPage />} />
+                    <Route path="/settings/fleet" element={<PlaceholderPage />} />
+                    <Route path="/settings/customer-setup" element={<PlaceholderPage />} />
+                    <Route path="/settings/equipment" element={<PlaceholderPage />} />
+                    <Route path="/settings/ccrs" element={<PlaceholderPage />} />
+                    <Route path="/settings/ai" element={<PlaceholderPage />} />
+                    <Route path="/settings/integrations" element={<PlaceholderPage />} />
+                    <Route path="/settings/strains" element={<PlaceholderPage />} />
+                    <Route path="/settings/areas" element={<PlaceholderPage />} />
+                  </Route>
                 </Route>
-              </Route>
 
-              {/* Catch-all: redirect to login */}
-              <Route path="*" element={<LoginPage />} />
-            </Routes>
+                {/* Catch-all: redirect to login */}
+                <Route path="*" element={<LoginPage />} />
+              </Routes>
+            </ShortcutsProvider>
           </TooltipProvider>
         </ThemeProvider>
         </OrgProvider>
