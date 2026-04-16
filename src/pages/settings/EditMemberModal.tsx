@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { X, Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import ScrollableModal, { ModalHeader } from "@/components/ui/scrollable-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import UserAvatar from "@/components/shared/UserAvatar";
@@ -39,13 +39,6 @@ export default function EditMemberModal({ open, onClose, member, allRoles, assig
     setRemoveConfirm("");
   }, [open, member, assignedRoleIds]);
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [open, onClose]);
-
   if (!member) return null;
 
   const toggleRole = (id: string) => {
@@ -66,17 +59,11 @@ export default function EditMemberModal({ open, onClose, member, allRoles, assig
         full_name: `${firstName.trim()} ${lastName.trim()}`.trim() || undefined,
       });
 
-      // Diff role assignments
       const prev = new Set(assignedRoleIds);
       const toAdd = Array.from(selected).filter((id) => !prev.has(id));
       const toRemove = Array.from(prev).filter((id) => !selected.has(id));
-
-      for (const id of toAdd) {
-        await assignRole(member.user_id, id);
-      }
-      for (const id of toRemove) {
-        await unassignRole(member.user_id, id);
-      }
+      for (const id of toAdd) await assignRole(member.user_id, id);
+      for (const id of toRemove) await unassignRole(member.user_id, id);
 
       toast.success("Member updated");
       onClose();
@@ -104,127 +91,106 @@ export default function EditMemberModal({ open, onClose, member, allRoles, assig
   const initials = (member.first_name?.[0] ?? "") + (member.last_name?.[0] ?? "") || (member.email?.[0]?.toUpperCase() ?? "U");
 
   return (
-    <AnimatePresence>
-      {open && (
+    <ScrollableModal
+      open={open}
+      onClose={onClose}
+      size="md"
+      header={<ModalHeader title="Edit member" />}
+      footer={
         <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[70]"
-            onClick={onClose}
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.97, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 12 }}
-            transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[71] w-full max-w-[560px] max-h-[90vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl"
-          >
-            <div className="flex items-center justify-between px-6 h-14 border-b border-border shrink-0">
-              <h2 className="text-[15px] font-semibold text-foreground">Edit member</h2>
-              <button onClick={onClose} className="p-1.5 rounded-md hover:bg-accent text-muted-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+          <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving} className="min-w-[100px]">
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+          </Button>
+        </>
+      }
+    >
+      <div className="p-6 space-y-5">
+        <div className="flex items-center gap-4">
+          <UserAvatar avatarUrl={member.avatar_url} initials={initials} size={56} />
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold text-foreground truncate">{member.email ?? "(no email)"}</p>
+            <p className="text-[11px] text-muted-foreground">Member since {member.joined_at ? new Date(member.joined_at).toLocaleDateString() : "—"}</p>
+          </div>
+        </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-5">
-              <div className="flex items-center gap-4">
-                <UserAvatar avatarUrl={member.avatar_url} initials={initials} size={56} />
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-foreground truncate">{member.email ?? "(no email)"}</p>
-                  <p className="text-[11px] text-muted-foreground">Member since {member.joined_at ? new Date(member.joined_at).toLocaleDateString() : "—"}</p>
-                </div>
-              </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="First Name">
+            <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+          </Field>
+          <Field label="Last Name">
+            <Input value={lastName} onChange={(e) => setLastName(e.target.value)} />
+          </Field>
+        </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="First Name">
-                  <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-                </Field>
-                <Field label="Last Name">
-                  <Input value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                </Field>
-              </div>
+        <Field label="Email">
+          <Input value={member.email ?? ""} disabled className="opacity-60 cursor-not-allowed" />
+          <p className="text-[11px] text-muted-foreground">Email cannot be changed here. Ask the user to update their own profile.</p>
+        </Field>
 
-              <Field label="Email">
-                <Input value={member.email ?? ""} disabled className="opacity-60 cursor-not-allowed" />
-                <p className="text-[11px] text-muted-foreground">Email cannot be changed here. Ask the user to update their own profile.</p>
-              </Field>
+        <div className="space-y-1.5">
+          <label className="block text-[11px] uppercase tracking-wider font-medium text-muted-foreground">Roles</label>
+          <div className="flex flex-wrap gap-1.5">
+            {allRoles.map((r) => {
+              const isSel = selected.has(r.id);
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => toggleRole(r.id)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border text-[12px] font-medium transition-colors",
+                    isSel
+                      ? "bg-primary/15 border-primary/40 text-primary"
+                      : "bg-muted/30 border-border text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {r.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-[11px] uppercase tracking-wider font-medium text-muted-foreground">Roles</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {allRoles.map((r) => {
-                    const isSel = selected.has(r.id);
-                    return (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => toggleRole(r.id)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border text-[12px] font-medium transition-colors",
-                          isSel
-                            ? "bg-primary/15 border-primary/40 text-primary"
-                            : "bg-muted/30 border-border text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        {r.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Danger zone */}
-              <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
-                  <h3 className="text-[12px] font-semibold text-destructive uppercase tracking-wider">Danger zone</h3>
-                </div>
-                {!showRemove ? (
-                  <div className="flex items-center justify-between">
-                    <p className="text-[12px] text-muted-foreground">Remove this user from the organization.</p>
-                    <Button variant="outline" size="sm" className="text-destructive border-destructive/40 hover:bg-destructive/10" onClick={() => setShowRemove(true)}>
-                      Remove from Org
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-[12px] text-foreground">
-                      Type <span className="font-mono font-semibold">{member.email ?? "REMOVE"}</span> to confirm removal.
-                    </p>
-                    <Input
-                      value={removeConfirm}
-                      onChange={(e) => setRemoveConfirm(e.target.value)}
-                      placeholder={member.email ?? "REMOVE"}
-                      className="font-mono"
-                    />
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => { setShowRemove(false); setRemoveConfirm(""); }}>Cancel</Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={removeConfirm !== (member.email ?? "REMOVE") || removing}
-                        onClick={handleRemove}
-                      >
-                        {removing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Confirm Remove"}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 px-6 h-14 border-t border-border shrink-0">
-              <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
-              <Button onClick={handleSave} disabled={saving} className="min-w-[100px]">
-                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+        <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
+            <h3 className="text-[12px] font-semibold text-destructive uppercase tracking-wider">Danger zone</h3>
+          </div>
+          {!showRemove ? (
+            <div className="flex items-center justify-between">
+              <p className="text-[12px] text-muted-foreground">Remove this user from the organization.</p>
+              <Button variant="outline" size="sm" className="text-destructive border-destructive/40 hover:bg-destructive/10" onClick={() => setShowRemove(true)}>
+                Remove from Org
               </Button>
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-[12px] text-foreground">
+                Type <span className="font-mono font-semibold">{member.email ?? "REMOVE"}</span> to confirm removal.
+              </p>
+              <Input
+                value={removeConfirm}
+                onChange={(e) => setRemoveConfirm(e.target.value)}
+                placeholder={member.email ?? "REMOVE"}
+                className="font-mono"
+              />
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => { setShowRemove(false); setRemoveConfirm(""); }}>Cancel</Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={removeConfirm !== (member.email ?? "REMOVE") || removing}
+                  onClick={handleRemove}
+                >
+                  {removing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Confirm Remove"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </ScrollableModal>
   );
 }
 

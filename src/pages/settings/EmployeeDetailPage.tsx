@@ -45,6 +45,8 @@ import {
   useEmployeeTimeEntries,
   DEPARTMENT_COLORS,
 } from "@/hooks/useEmployees";
+import { useDrivers } from "@/hooks/useDrivers";
+import { Truck, ChevronRight } from "lucide-react";
 import EmployeeFormModal from "./EmployeeFormModal";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +63,11 @@ export default function EmployeeDetailPage() {
   const navigate = useNavigate();
   const { data: employee, loading, refresh } = useEmployee(id);
   const { updateEmployee, terminateEmployee, data: allEmployees } = useEmployees();
+  const { data: drivers } = useDrivers();
+  const linkedDriver = useMemo(
+    () => drivers.find((d) => d.driver_type === "delivery" && d.employee_id === id) ?? null,
+    [drivers, id],
+  );
   const [editOpen, setEditOpen] = useState(false);
   const { setContext, clearContext } = useCodyContext();
 
@@ -366,6 +373,27 @@ export default function EmployeeDetailPage() {
               </div>
             </div>
           </div>
+
+          {linkedDriver && (
+            <div className="mt-4">
+              <button
+                onClick={() => navigate("/settings/fleet?tab=drivers")}
+                className="w-full flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 hover:bg-primary/10 transition-colors text-left group"
+              >
+                <div className="w-10 h-10 rounded-lg bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                  <Truck className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-semibold text-foreground">Delivery Driver</p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    License <span className="font-mono">{linkedDriver.drivers_license_number}</span>
+                    {linkedDriver.drivers_license_expires && <> · expires <DateTime value={linkedDriver.drivers_license_expires} format="date-only" /></>}
+                  </p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </button>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
             <div className="rounded-xl border border-border bg-card p-5">

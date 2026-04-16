@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { X, ChevronDown, ChevronUp, Loader2, Lock, Copy, Info } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Lock, Copy, Info, Shield } from "lucide-react";
+import ScrollableModal, { ModalHeader } from "@/components/ui/scrollable-modal";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -136,44 +136,37 @@ export default function RoleFormModal({ open, onClose, editing, allRoles, onCrea
   const allowedCount = selectedIds.size;
 
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[70]"
-            onClick={onClose}
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.97, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 12 }}
-            transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[71] w-full max-w-[900px] max-h-[90vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl"
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 h-14 border-b border-border shrink-0">
-              <div className="flex items-center gap-2">
-                {isSystemRole && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
-                <div>
-                  <h2 className="text-[15px] font-semibold text-foreground flex items-center gap-2">
-                    {isEditMode ? (isSystemRole ? "View Role (system)" : "Edit Role") : "Create Custom Role"}
-                  </h2>
-                  <p className="text-[11px] text-muted-foreground">
-                    {isSystemRole
-                      ? "System roles are read-only. Duplicate to customize."
-                      : "Configure role name, description, and permissions"}
-                  </p>
-                </div>
-              </div>
-              <button onClick={onClose} className="p-1.5 rounded-md hover:bg-accent text-muted-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Body: two columns */}
+    <ScrollableModal
+      open={open}
+      onClose={onClose}
+      size="xl"
+      customBody
+      header={
+        <ModalHeader
+          icon={isSystemRole ? <Lock className="w-4 h-4 text-muted-foreground" /> : <Shield className="w-4 h-4 text-primary" />}
+          title={isEditMode ? (isSystemRole ? "View Role (system)" : "Edit Role") : "Create Custom Role"}
+          subtitle={isSystemRole ? "System roles are read-only. Duplicate to customize." : "Configure role name, description, and permissions"}
+        />
+      }
+      footer={
+        <div className="flex items-center justify-between w-full">
+          <div className="text-[11px] text-muted-foreground">
+            {isReadOnly && (
+              <span>This is a system role. <button className="text-primary hover:underline" onClick={onClose}>Duplicate to customize</button>.</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+            {!isReadOnly && (
+              <Button onClick={handleSave} disabled={saving} className="min-w-[100px]">
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : isEditMode ? "Save" : "Create Role"}
+              </Button>
+            )}
+          </div>
+        </div>
+      }
+    >
+            {/* Body: two columns (customBody mode — we supply flex-1 min-h-0) */}
             <div className="flex-1 min-h-0 flex overflow-hidden">
               {/* Left: form */}
               <div className="w-[320px] shrink-0 p-6 border-r border-border overflow-y-auto min-h-0 space-y-4">
@@ -326,25 +319,6 @@ export default function RoleFormModal({ open, onClose, editing, allRoles, onCrea
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="flex items-center justify-between gap-2 px-6 h-14 border-t border-border shrink-0">
-              <div className="text-[11px] text-muted-foreground">
-                {isReadOnly && (
-                  <span>This is a system role. <button className="text-primary hover:underline" onClick={onClose}>Duplicate to customize</button>.</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
-                {!isReadOnly && (
-                  <Button onClick={handleSave} disabled={saving} className="min-w-[100px]">
-                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : isEditMode ? "Save" : "Create Role"}
-                  </Button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+    </ScrollableModal>
   );
 }

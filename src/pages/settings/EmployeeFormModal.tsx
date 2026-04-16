@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, ChevronDown, ChevronUp, Loader2, Camera, Upload, Link2, Unlink, AlertCircle, Info } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Camera, Upload, Link2, Unlink, AlertCircle, Info, Users } from "lucide-react";
 import { toast } from "sonner";
+import ScrollableModal, { ModalHeader } from "@/components/ui/scrollable-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import UserAvatar from "@/components/shared/UserAvatar";
@@ -190,34 +191,28 @@ export default function EmployeeFormModal({ open, onClose, editing, onSave, take
   };
 
   return (
-    <AnimatePresence>
-      {open && (
+    <ScrollableModal
+      open={open}
+      onClose={onClose}
+      size="md"
+      onSubmit={handleSubmit}
+      header={
+        <ModalHeader
+          icon={<Users className="w-4 h-4 text-primary" />}
+          title={isEditMode ? "Edit Employee" : "Add Employee"}
+          subtitle="Track people who work at your facility"
+        />
+      }
+      footer={
         <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[70]"
-            onClick={onClose}
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.97, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 12 }}
-            transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[71] w-full max-w-[640px] max-h-[90vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl"
-          >
-            <div className="flex items-center justify-between px-6 h-14 border-b border-border shrink-0">
-              <div>
-                <h2 className="text-[15px] font-semibold text-foreground">{isEditMode ? "Edit Employee" : "Add Employee"}</h2>
-                <p className="text-[11px] text-muted-foreground">Track people who work at your facility</p>
-              </div>
-              <button onClick={onClose} className="p-1.5 rounded-md hover:bg-accent text-muted-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button type="submit" disabled={saving} className="min-w-[100px]">
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : isEditMode ? "Save" : "Add Employee"}
+          </Button>
+        </>
+      }
+    >
+      <div className="p-6 space-y-4">
               {/* Required block */}
               <div className="grid grid-cols-2 gap-3">
                 <Field label="First Name" required error={errors.first_name}>
@@ -431,18 +426,8 @@ export default function EmployeeFormModal({ open, onClose, editing, onSave, take
                 }
                 return null;
               })()}
-            </form>
-
-            <div className="flex items-center justify-end gap-2 px-6 h-14 border-t border-border shrink-0">
-              <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
-              <Button onClick={handleSubmit} disabled={saving} className="min-w-[100px]">
-                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : isEditMode ? "Save" : "Add Employee"}
-              </Button>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+      </div>
+    </ScrollableModal>
   );
 }
 
