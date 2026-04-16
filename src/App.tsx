@@ -50,6 +50,13 @@ import QALotDetailPage from "@/pages/inventory/QALotDetailPage";
 import ProductionPage from "@/pages/inventory/ProductionPage";
 import ProductionRunDetailPage from "@/pages/inventory/ProductionRunDetailPage";
 import BOMDetailPage from "@/pages/inventory/BOMDetailPage";
+import AccountsPage from "@/pages/sales/AccountsPage";
+import AccountDetailPage from "@/pages/sales/AccountDetailPage";
+import OrdersPage from "@/pages/sales/OrdersPage";
+import OrderDetailPage from "@/pages/sales/OrderDetailPage";
+import ManifestsPage from "@/pages/sales/ManifestsPage";
+import ManifestDetailPage from "@/pages/sales/ManifestDetailPage";
+import TransfersPage from "@/pages/sales/TransfersPage";
 import { ShortcutsProvider } from "@/components/shared/KeyboardShortcuts";
 
 function ScrollToTop() {
@@ -110,8 +117,13 @@ export default function App() {
                     <Route path="/inventory/disposals" element={<PlaceholderPage />} />
 
                     {/* Sales */}
-                    <Route path="/sales/accounts" element={<PlaceholderPage />} />
-                    <Route path="/sales/orders" element={<PlaceholderPage />} />
+                    <Route path="/sales/accounts" element={<AccountsPage />} />
+                    <Route path="/sales/accounts/:id" element={<AccountDetailPage />} />
+                    <Route path="/sales/orders" element={<OrdersPage />} />
+                    <Route path="/sales/orders/:id" element={<OrderDetailPage />} />
+                    <Route path="/sales/manifests" element={<ManifestsPage />} />
+                    <Route path="/sales/manifests/:id" element={<ManifestDetailPage />} />
+                    <Route path="/sales/transfers" element={<TransfersPage />} />
                     <Route path="/sales/fulfillment" element={<PlaceholderPage />} />
 
                     {/* Compliance */}

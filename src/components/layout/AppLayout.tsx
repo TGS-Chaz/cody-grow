@@ -62,10 +62,11 @@ const navGroups = [
     { to: "/inventory/labels", icon: Tag, label: "Labels" },
     { to: "/inventory/disposals", icon: Trash2, label: "Disposals" },
   ]},
-  { label: "Sales", items: [
+  { label: "Sales & Fulfillment", items: [
     { to: "/sales/accounts", icon: Building2, label: "Accounts" },
     { to: "/sales/orders", icon: ShoppingCart, label: "Orders" },
-    { to: "/sales/fulfillment", icon: Truck, label: "Fulfillment" },
+    { to: "/sales/manifests", icon: FileText, label: "Manifests" },
+    { to: "/sales/transfers", icon: Truck, label: "Inbound Transfers" },
   ]},
   { label: "Compliance", items: [
     { to: "/compliance/ccrs", icon: ShieldCheck, label: "CCRS Dashboard" },
