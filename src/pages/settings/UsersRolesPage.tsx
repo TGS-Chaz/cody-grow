@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   Users,
   Crown,
@@ -38,6 +38,7 @@ import { useCodyContext } from "@/hooks/useCodyContext";
 import { OrgMember, useOrgMembers, useOrgUserRoles, useMembersStats } from "@/hooks/useUsers";
 import { Role, useRoles, useRoleMemberCounts } from "@/hooks/useRoles";
 import { useAllPermissions, usePermissionMatrix, groupByCategory, CATEGORY_COLORS, CATEGORY_ORDER } from "@/hooks/usePermissions";
+import { useEmployees } from "@/hooks/useEmployees";
 import InviteMemberModal from "./InviteMemberModal";
 import EditMemberModal from "./EditMemberModal";
 import RoleFormModal from "./RoleFormModal";
@@ -86,10 +87,21 @@ export default function UsersRolesPage() {
 // ─── Tab 1: Team Members ──────────────────────────────────────────────────────
 
 function MembersTab({ active }: { active: boolean }) {
+  const navigate = useNavigate();
   const { data: members, loading } = useOrgMembers();
   const { data: userRoles } = useOrgUserRoles();
   const { data: roles } = useRoles();
+  const { data: employees } = useEmployees();
   const stats = useMembersStats(members);
+
+  // Map user_id → linked employee (for cross-linking)
+  const employeeByUserId = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>();
+    for (const e of employees) {
+      if (e.user_id) map.set(e.user_id, { id: e.id, name: `${e.first_name} ${e.last_name}` });
+    }
+    return map;
+  }, [employees]);
   const [searchValue, setSearchValue] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<OrgMember | null>(null);
@@ -162,6 +174,7 @@ function MembersTab({ active }: { active: boolean }) {
         const m = row.original;
         const initials = (m.first_name?.[0] ?? "") + (m.last_name?.[0] ?? "") || (m.email?.[0]?.toUpperCase() ?? "U");
         const displayName = (m.full_name ?? `${m.first_name ?? ""} ${m.last_name ?? ""}`.trim()) || m.email?.split("@")[0] || "—";
+        const linkedEmp = employeeByUserId.get(m.user_id);
         return (
           <div className="flex items-center gap-2.5">
             <UserAvatar avatarUrl={m.avatar_url} initials={initials} size={28} animated={false} />
@@ -170,6 +183,14 @@ function MembersTab({ active }: { active: boolean }) {
                 {displayName}
                 {m.role === "owner" && <Crown className="w-3 h-3 text-amber-500 fill-amber-500" />}
               </div>
+              {linkedEmp && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); navigate(`/settings/employees/${linkedEmp.id}`); }}
+                  className="text-[10px] text-primary/80 hover:text-primary hover:underline inline-flex items-center gap-0.5"
+                >
+                  Linked: {linkedEmp.name}
+                </button>
+              )}
             </div>
           </div>
         );
@@ -245,7 +266,7 @@ function MembersTab({ active }: { active: boolean }) {
         </RowActionsCell>
       ),
     },
-  ], [rolesByUser]);
+  ], [rolesByUser, employeeByUserId, navigate]);
 
   return (
     <div>
