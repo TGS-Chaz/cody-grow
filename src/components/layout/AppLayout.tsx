@@ -10,6 +10,8 @@ import {
   Barcode,
   FlaskConical,
   Factory,
+  Tag,
+  Trash2,
   Building2,
   ShoppingCart,
   Truck,
@@ -54,10 +56,11 @@ const navGroups = [
     { to: "/cultivation/harvests", icon: Scissors, label: "Harvests" },
   ]},
   { label: "Inventory", items: [
-    { to: "/inventory/products", icon: Package, label: "Products" },
     { to: "/inventory/batches", icon: Barcode, label: "Batches" },
-    { to: "/inventory/lab-testing", icon: FlaskConical, label: "Lab Testing" },
+    { to: "/inventory/qa", icon: FlaskConical, label: "QA & Lab Testing" },
     { to: "/inventory/production", icon: Factory, label: "Production" },
+    { to: "/inventory/labels", icon: Tag, label: "Labels" },
+    { to: "/inventory/disposals", icon: Trash2, label: "Disposals" },
   ]},
   { label: "Sales", items: [
     { to: "/sales/accounts", icon: Building2, label: "Accounts" },
