@@ -7,10 +7,16 @@ import { cn } from "@/lib/utils";
  * ScrollableModal — design-system-compliant modal with sticky header,
  * scrollable body, and sticky footer.
  *
- * Critical detail: the body uses `min-h-0` so flex-1 can shrink below its
- * content size, enabling overflow:auto to scroll. Without min-h-0, a flex
- * column child defaults to `min-height: auto` and the modal will grow past
- * max-height, cutting off the sticky footer.
+ * Centering strategy: the backdrop is a flex container (items-center justify-center)
+ * and the modal is a flex child. This avoids the classic transform-conflict bug
+ * where Tailwind's `-translate-x-1/2 -translate-y-1/2` collides with Framer Motion's
+ * animated `y`/`scale` transforms — FM overwrites the translate and the modal's
+ * bottom edge drops off-screen.
+ *
+ * Body layout: `max-h-[90vh]` container + `flex flex-col` + a `flex-1 min-h-0 overflow-y-auto`
+ * body. The `min-h-0` is critical — flex children default to `min-height: auto` which
+ * prevents shrinking below content size. Without it, the modal grows past max-h and
+ * the sticky footer gets pushed off-screen.
  */
 interface ScrollableModalProps {
   open: boolean;
@@ -32,7 +38,7 @@ interface ScrollableModalProps {
    * for including `flex-1 min-h-0` on its root container.
    */
   customBody?: boolean;
-  /** Raise the z-index if nesting modals (default 70 backdrop / 71 content). */
+  /** Raise the z-index if nesting modals (default 70). */
   zIndex?: number;
 }
 
@@ -64,6 +70,14 @@ export default function ScrollableModal({
     return () => window.removeEventListener("keydown", handler);
   }, [open, closeOnEscape, onClose]);
 
+  // Lock body scroll while modal is open so background doesn't scroll behind it.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
   const bodyInner = customBody ? (
     children
   ) : (
@@ -79,34 +93,36 @@ export default function ScrollableModal({
   return (
     <AnimatePresence>
       {open && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-            style={{ zIndex }}
-            onClick={closeOnBackdrop ? onClose : undefined}
-          />
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm"
+          style={{ zIndex }}
+          onClick={closeOnBackdrop ? onClose : undefined}
+        >
           <motion.div
             initial={{ opacity: 0, scale: 0.97, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 12 }}
             transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
             className={cn(
-              "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-h-[90vh] sm:max-h-[90vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl",
+              // Layout: full width up to size cap, height up to 90% of viewport, flex column
+              "w-full max-h-[calc(100vh-1.5rem)] sm:max-h-[90vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl",
               SIZE_CLASS[size],
               className,
             )}
-            style={{ zIndex: zIndex + 1 }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Sticky header */}
             <div className="flex items-center justify-between px-6 h-14 border-b border-border shrink-0">
               <div className="min-w-0 flex-1">{header}</div>
               <button
                 onClick={onClose}
                 className="p-1.5 rounded-md hover:bg-accent text-muted-foreground shrink-0 ml-2"
                 aria-label="Close"
+                type="button"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -124,7 +140,7 @@ export default function ScrollableModal({
               </>
             )}
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );

@@ -68,20 +68,21 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
       {children}
       <AnimatePresence>
         {open && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100]"
-              onClick={() => setOpen(false)}
-            />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.97, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.97, y: 8 }}
               transition={{ duration: 0.15 }}
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] w-full max-w-md rounded-xl border border-border bg-card shadow-2xl"
+              className="w-full max-w-md max-h-[90vh] flex flex-col rounded-xl border border-border bg-card shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-5 h-12 border-b border-border">
                 <div className="flex items-center gap-2">
@@ -92,7 +93,7 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
+              <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
                 {grouped.size === 0 ? (
                   <p className="text-[12px] text-muted-foreground">No shortcuts registered on this page.</p>
                 ) : (
@@ -118,7 +119,7 @@ export function ShortcutsProvider({ children }: { children: ReactNode }) {
                 )}
               </div>
             </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </ShortcutsContext.Provider>

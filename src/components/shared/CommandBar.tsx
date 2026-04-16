@@ -96,20 +96,20 @@ export default function CommandBar() {
   return (
     <AnimatePresence>
       {open && (
-        <>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[90]"
+            className="fixed inset-0 z-[90] flex items-start justify-center pt-[15vh] px-4 bg-black/40 backdrop-blur-sm"
             onClick={() => setOpen(false)}
-          />
+          >
           <motion.div
             initial={{ opacity: 0, scale: 0.97, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 8 }}
             transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
-            className="fixed top-[15vh] left-1/2 -translate-x-1/2 z-[91] w-full max-w-xl px-4"
+            className="w-full max-w-xl"
+            onClick={(e) => e.stopPropagation()}
           >
             <Command
               label="Command menu"
@@ -168,7 +168,7 @@ export default function CommandBar() {
               </Command.List>
             </Command>
           </motion.div>
-        </>
+          </motion.div>
       )}
     </AnimatePresence>
   );
