@@ -22,7 +22,7 @@ export default function Dashboard() {
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
       <PageHeader
-        title="Welcome to Cody Seed-to-Sale"
+        title="Welcome to Cody Grow"
         description={`Signed in as ${user?.email}`}
       />
 

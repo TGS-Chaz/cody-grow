@@ -93,10 +93,10 @@ export default function AppLayout() {
               <span style={{ color: "hsl(var(--primary))" }}>c</span>
               <span className="text-foreground">ody</span>
               <span
-                className="ml-1 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm self-center"
+                className="ml-1 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm self-center"
                 style={{ background: "hsl(168 100% 42% / 0.12)", color: "hsl(168 100% 42%)" }}
               >
-                s2s
+                grow
               </span>
             </div>
           )}

@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import LoginPage from "@/pages/auth/LoginPage";
 import SignupPage from "@/pages/auth/SignupPage";
 import RequestAccessPage from "@/pages/auth/RequestAccessPage";
+import NoAccessPage from "@/pages/auth/NoAccessPage";
 import Dashboard from "@/pages/dashboard/Dashboard";
 import PlaceholderPage from "@/pages/PlaceholderPage";
 
@@ -27,6 +28,7 @@ export default function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/request-access" element={<RequestAccessPage />} />
+              <Route path="/no-access" element={<NoAccessPage />} />
 
               {/* Protected routes */}
               <Route element={<ProtectedRoute />}>

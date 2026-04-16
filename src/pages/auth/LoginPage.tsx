@@ -53,7 +53,7 @@ export default function LoginPage() {
         {/* Card */}
         <div className="rounded-xl p-6 bg-white dark:bg-[#111827] border border-gray-200 dark:border-gray-700/50 shadow-xl shadow-gray-200/50 dark:shadow-black/30">
           <h1 className="text-[17px] font-semibold text-gray-900 dark:text-white mb-1">Welcome back</h1>
-          <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">Sign in to Seed-to-Sale</p>
+          <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">Sign in to Cody Grow</p>
 
           <form onSubmit={handleSignIn} className="space-y-4">
             <div className="space-y-1.5">

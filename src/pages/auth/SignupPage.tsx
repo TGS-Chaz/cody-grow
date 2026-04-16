@@ -51,7 +51,7 @@ export default function SignupPage() {
 
         <div className="rounded-xl p-6 bg-white dark:bg-[#111827] border border-gray-200 dark:border-gray-700/50 shadow-xl shadow-gray-200/50 dark:shadow-black/30">
           <h1 className="text-[17px] font-semibold text-gray-900 dark:text-white mb-1">Create your account</h1>
-          <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">Get started with Seed-to-Sale</p>
+          <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">Get started with Cody Grow</p>
 
           <form onSubmit={handleSignUp} className="space-y-4">
             <div className="space-y-1.5">

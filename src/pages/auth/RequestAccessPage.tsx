@@ -65,13 +65,13 @@ export default function RequestAccessPage() {
               </div>
               <h2 className="text-[17px] font-semibold text-gray-900 dark:text-white mb-2">You're on the list!</h2>
               <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                Thanks for your interest in Cody Seed-to-Sale. We'll reach out within 24 hours.
+                Thanks for your interest in Cody Grow. We'll reach out within 24 hours.
               </p>
             </motion.div>
           ) : (
             <>
               <h1 className="text-[17px] font-semibold text-gray-900 dark:text-white mb-1">Request Early Access</h1>
-              <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">Seed-to-Sale for WA cannabis licensees.</p>
+              <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">Cody Grow for WA cannabis licensees.</p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
