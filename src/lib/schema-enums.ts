@@ -470,6 +470,102 @@ export const CCRS_INVENTORY_CATEGORIES = [
   "PropagationMaterial", "HarvestedMaterial", "IntermediateProduct", "EndProduct",
 ] as const;
 export type CcrsInventoryCategory = typeof CCRS_INVENTORY_CATEGORIES[number];
+export const CCRS_INVENTORY_CATEGORY_LABELS: Record<CcrsInventoryCategory, string> = {
+  PropagationMaterial: "Propagation Material",
+  HarvestedMaterial: "Harvested Material",
+  IntermediateProduct: "Intermediate Product",
+  EndProduct: "End Product",
+};
+export const CCRS_INVENTORY_CATEGORY_COLORS: Record<CcrsInventoryCategory, { bg: string; text: string; hex: string }> = {
+  PropagationMaterial: { bg: "bg-green-500/15",    text: "text-green-500",    hex: "#22C55E" },
+  HarvestedMaterial:   { bg: "bg-emerald-500/15",  text: "text-emerald-500",  hex: "#10B981" },
+  IntermediateProduct: { bg: "bg-purple-500/15",   text: "text-purple-500",   hex: "#A855F7" },
+  EndProduct:          { bg: "bg-teal-500/15",     text: "text-teal-500",     hex: "#14B8A6" },
+};
+
+/** CCRS InventoryType master list — the union of every type allowed across
+ * the four categories. Cross-category validity is enforced in UI via
+ * CCRS_CATEGORY_TYPE_MAP and in DB via grow_products_ccrs_inventory_type_check. */
+export const CCRS_INVENTORY_TYPES = [
+  "Seed", "Plant", "Clone",
+  "Wet Flower", "Wet Other Material", "Flower Unlotted", "Flower Lot", "Other Material Unlotted", "Other Material Lot",
+  "Marijuana Mix", "Concentrate for Inhalation", "Non-Solvent based Concentrate", "Hydrocarbon Concentrate", "CO2 Concentrate", "Ethanol Concentrate", "Food Grade Solvent Concentrate", "Infused Cooking Medium", "CBD", "Waste Usable Marijuana",
+  "Capsule", "Solid Edible", "Tincture", "Liquid Edible", "Transdermal", "Topical Ointment", "Marijuana Mix Packaged", "Marijuana Mix Infused", "Suppository", "Sample Jar",
+  "Waste",
+] as const;
+export type CcrsInventoryType = typeof CCRS_INVENTORY_TYPES[number];
+
+/** CCRS Category → valid Types mapping. The product form uses this to filter
+ * the Type dropdown based on the selected Category. "Waste" is the only type
+ * that legitimately belongs to multiple categories (Harvested + Intermediate). */
+export const CCRS_CATEGORY_TYPE_MAP: Record<CcrsInventoryCategory, readonly CcrsInventoryType[]> = {
+  PropagationMaterial: ["Seed", "Plant", "Clone"],
+  HarvestedMaterial: [
+    "Wet Flower", "Wet Other Material", "Flower Unlotted", "Flower Lot",
+    "Other Material Unlotted", "Other Material Lot", "Waste",
+  ],
+  IntermediateProduct: [
+    "Marijuana Mix", "Concentrate for Inhalation", "Non-Solvent based Concentrate",
+    "Hydrocarbon Concentrate", "CO2 Concentrate", "Ethanol Concentrate",
+    "Food Grade Solvent Concentrate", "Infused Cooking Medium", "CBD",
+    "Waste Usable Marijuana", "Waste",
+  ],
+  EndProduct: [
+    "Capsule", "Solid Edible", "Tincture", "Liquid Edible", "Transdermal",
+    "Topical Ointment", "Marijuana Mix Packaged", "Marijuana Mix Infused",
+    "Suppository", "Sample Jar",
+  ],
+};
+
+/** Types that require the "Not For Kids" symbol on labels per WAC 314-55-105. */
+export const CCRS_INVENTORY_EDIBLE_TYPES: readonly CcrsInventoryType[] = [
+  "Solid Edible", "Liquid Edible", "Capsule", "Tincture", "Marijuana Mix Infused", "Suppository",
+];
+
+/** Warning text snippets per CCRS InventoryType per WAC 314-55-105 / DOH rules. */
+export const CCRS_INVENTORY_TYPE_WARNING_TEXT: Partial<Record<CcrsInventoryType, string>> = {
+  "Flower Lot": "This product has intoxicating effects and may be habit forming. Marijuana can impair concentration, coordination and judgment. Do not operate a vehicle or machinery under the influence of this drug.",
+  "Flower Unlotted": "This product has intoxicating effects and may be habit forming.",
+  "Concentrate for Inhalation": "This product has high potency. Start low, go slow.",
+  "Solid Edible": "Caution: When eaten or swallowed, the intoxicating effects of this drug may be delayed by two or more hours. Keep out of reach of children.",
+  "Liquid Edible": "Caution: When consumed, the intoxicating effects of this drug may be delayed by two or more hours. Keep out of reach of children.",
+  "Capsule": "Caution: When swallowed, the intoxicating effects may be delayed by two or more hours. Keep out of reach of children.",
+  "Tincture": "Caution: Intoxicating effects may be delayed when consumed. Keep out of reach of children.",
+  "Topical Ointment": "For external use only. Not for consumption.",
+  "Transdermal": "For external use only. Not for consumption.",
+  "Suppository": "For rectal/vaginal use only. Keep out of reach of children.",
+};
+
+// ─── Units of measure (grow_products.unit_of_measure) ────────────────────────
+export const UNITS_OF_MEASURE = ["grams", "ounces", "pounds", "kilograms", "units", "milliliters", "liters", "each"] as const;
+export type UnitOfMeasure = typeof UNITS_OF_MEASURE[number];
+export const UNIT_OF_MEASURE_LABELS: Record<UnitOfMeasure, string> = {
+  grams: "Grams (g)",
+  ounces: "Ounces (oz)",
+  pounds: "Pounds (lb)",
+  kilograms: "Kilograms (kg)",
+  units: "Units",
+  milliliters: "Milliliters (ml)",
+  liters: "Liters (L)",
+  each: "Each",
+};
+
+// ─── Weight display format (grow_products.weight_display_format) ─────────────
+export const WEIGHT_DISPLAY_FORMATS = ["grams_only", "ounces_only", "both"] as const;
+export type WeightDisplayFormat = typeof WEIGHT_DISPLAY_FORMATS[number];
+export const WEIGHT_DISPLAY_FORMAT_LABELS: Record<WeightDisplayFormat, string> = {
+  grams_only: "Grams only",
+  ounces_only: "Ounces only",
+  both: "Both",
+};
+
+/** SKU prefix per category — used by the form to auto-generate SKU values. */
+export const CCRS_CATEGORY_SKU_PREFIX: Record<CcrsInventoryCategory, string> = {
+  PropagationMaterial: "PRP",
+  HarvestedMaterial: "HVS",
+  IntermediateProduct: "INT",
+  EndProduct: "END",
+};
 
 // ─── grow_qa_* ────────────────────────────────────────────────────────────────
 export const QA_LOT_STATUSES = ["created", "sampled", "in_testing", "passed", "failed", "voided"] as const;

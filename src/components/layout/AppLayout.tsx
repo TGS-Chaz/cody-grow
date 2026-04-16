@@ -46,6 +46,7 @@ const navGroups = [
   { label: "Cultivation", items: [
     { to: "/cultivation/strains", icon: Dna, label: "Strains" },
     { to: "/cultivation/areas", icon: MapPin, label: "Areas" },
+    { to: "/cultivation/products", icon: Package, label: "Products" },
     { to: "/cultivation/sources", icon: Sprout, label: "Grow Sources" },
     { to: "/cultivation/board", icon: LayoutGrid, label: "Grow Board" },
     { to: "/cultivation/plants", icon: Leaf, label: "Plants" },

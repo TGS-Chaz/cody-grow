@@ -6031,30 +6031,36 @@ export type Database = {
       grow_product_lines: {
         Row: {
           created_at: string | null
+          description: string | null
           id: string
           is_active: boolean | null
           name: string
           org_id: string
           parent_id: string | null
           sort_order: number | null
+          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
+          description?: string | null
           id?: string
           is_active?: boolean | null
           name: string
           org_id: string
           parent_id?: string | null
           sort_order?: number | null
+          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          description?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           org_id?: string
           parent_id?: string | null
           sort_order?: number | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -6224,24 +6230,44 @@ export type Database = {
           ccrs_inventory_category: string | null
           ccrs_inventory_type: string | null
           ccrs_updated_by_username: string | null
+          cost_per_unit: number | null
           created_at: string | null
           created_by: string | null
+          custom_label_notes: string | null
+          default_package_size: number | null
           description: string | null
           external_id: string
           id: string
           image_url: string | null
+          is_active: boolean | null
           is_available: boolean | null
           is_discontinued: boolean | null
+          is_doh_compliant: boolean | null
+          is_employee_sample: boolean | null
           is_marketplace: boolean | null
+          is_medical: boolean | null
+          is_taxable: boolean | null
+          is_trade_sample: boolean | null
           label_template_id: string | null
           name: string
           org_id: string
           package_size: string | null
           product_line_id: string | null
+          requires_child_resistant_packaging: boolean | null
+          requires_lab_testing: boolean | null
           servings_per_unit: number | null
+          sku: string | null
+          sort_order: number | null
           strain_id: string | null
+          tags: string[] | null
+          tax_rate_override: number | null
+          unit_of_measure: string | null
+          unit_price: number | null
           unit_weight_grams: number | null
+          upc: string | null
           updated_at: string | null
+          warning_text: string | null
+          weight_display_format: string | null
         }
         Insert: {
           category: string
@@ -6249,24 +6275,44 @@ export type Database = {
           ccrs_inventory_category?: string | null
           ccrs_inventory_type?: string | null
           ccrs_updated_by_username?: string | null
+          cost_per_unit?: number | null
           created_at?: string | null
           created_by?: string | null
+          custom_label_notes?: string | null
+          default_package_size?: number | null
           description?: string | null
           external_id: string
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
           is_available?: boolean | null
           is_discontinued?: boolean | null
+          is_doh_compliant?: boolean | null
+          is_employee_sample?: boolean | null
           is_marketplace?: boolean | null
+          is_medical?: boolean | null
+          is_taxable?: boolean | null
+          is_trade_sample?: boolean | null
           label_template_id?: string | null
           name: string
           org_id: string
           package_size?: string | null
           product_line_id?: string | null
+          requires_child_resistant_packaging?: boolean | null
+          requires_lab_testing?: boolean | null
           servings_per_unit?: number | null
+          sku?: string | null
+          sort_order?: number | null
           strain_id?: string | null
+          tags?: string[] | null
+          tax_rate_override?: number | null
+          unit_of_measure?: string | null
+          unit_price?: number | null
           unit_weight_grams?: number | null
+          upc?: string | null
           updated_at?: string | null
+          warning_text?: string | null
+          weight_display_format?: string | null
         }
         Update: {
           category?: string
@@ -6274,24 +6320,44 @@ export type Database = {
           ccrs_inventory_category?: string | null
           ccrs_inventory_type?: string | null
           ccrs_updated_by_username?: string | null
+          cost_per_unit?: number | null
           created_at?: string | null
           created_by?: string | null
+          custom_label_notes?: string | null
+          default_package_size?: number | null
           description?: string | null
           external_id?: string
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
           is_available?: boolean | null
           is_discontinued?: boolean | null
+          is_doh_compliant?: boolean | null
+          is_employee_sample?: boolean | null
           is_marketplace?: boolean | null
+          is_medical?: boolean | null
+          is_taxable?: boolean | null
+          is_trade_sample?: boolean | null
           label_template_id?: string | null
           name?: string
           org_id?: string
           package_size?: string | null
           product_line_id?: string | null
+          requires_child_resistant_packaging?: boolean | null
+          requires_lab_testing?: boolean | null
           servings_per_unit?: number | null
+          sku?: string | null
+          sort_order?: number | null
           strain_id?: string | null
+          tags?: string[] | null
+          tax_rate_override?: number | null
+          unit_of_measure?: string | null
+          unit_price?: number | null
           unit_weight_grams?: number | null
+          upc?: string | null
           updated_at?: string | null
+          warning_text?: string | null
+          weight_display_format?: string | null
         }
         Relationships: [
           {
