@@ -96,7 +96,7 @@ export default function InviteMemberModal({ open, onClose, roles }: InviteMember
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
               <Field label="Email" required error={errors.email}>
                 <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="teammate@company.com" autoFocus />
               </Field>

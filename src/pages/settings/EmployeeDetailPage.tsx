@@ -102,31 +102,44 @@ export default function EmployeeDetailPage() {
 
   const takenUserIds = useMemo(() => allEmployees.filter((e) => e.user_id).map((e) => e.user_id!), [allEmployees]);
 
-  useEffect(() => {
-    if (!employee) return;
-    setContext({
-      context_type: "employee_detail",
-      context_id: employee.id,
-      page_data: {
-        employee: {
-          name: `${employee.first_name} ${employee.last_name}`,
-          department: employee.department,
-          job_title: employee.job_title,
-          status: employee.employment_status,
-          has_system_access: !!employee.user_id,
-          facility: employee.facility?.name,
-          hire_date: employee.hire_date,
-        },
-        weekly_hours: weeklyHours,
-        tasks_pending: tasksByStatus.pending.length,
-        tasks_in_progress: tasksByStatus.in_progress.length,
-        tasks_completed: tasksByStatus.completed.length,
-        training_count: training.length,
-        license_expiring: licenseExpiringSoon,
+  // Stabilize Cody context payload with primitive deps so the setContext effect
+  // doesn't fire on every render (which would cascade through the provider).
+  const employeeId = employee?.id ?? null;
+  const employeeSignature = employee
+    ? `${employee.updated_at}|${employee.user_id ?? ""}|${employee.employment_status}`
+    : "";
+  const pendingCount = tasksByStatus.pending.length;
+  const inProgressCount = tasksByStatus.in_progress.length;
+  const completedCount = tasksByStatus.completed.length;
+  const trainingCount = training.length;
+
+  const codyPayload = useMemo(() => {
+    if (!employee) return null;
+    return {
+      employee: {
+        name: `${employee.first_name} ${employee.last_name}`,
+        department: employee.department,
+        job_title: employee.job_title,
+        status: employee.employment_status,
+        has_system_access: !!employee.user_id,
+        facility: employee.facility?.name,
+        hire_date: employee.hire_date,
       },
-    });
+      weekly_hours: weeklyHours,
+      tasks_pending: pendingCount,
+      tasks_in_progress: inProgressCount,
+      tasks_completed: completedCount,
+      training_count: trainingCount,
+      license_expiring: licenseExpiringSoon,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeId, employeeSignature, weeklyHours, pendingCount, inProgressCount, completedCount, trainingCount, licenseExpiringSoon]);
+
+  useEffect(() => {
+    if (!codyPayload) return;
+    setContext({ context_type: "employee_detail", context_id: employeeId, page_data: codyPayload });
     return () => clearContext();
-  }, [employee, weeklyHours, tasksByStatus, training.length, licenseExpiringSoon, setContext, clearContext]);
+  }, [setContext, clearContext, codyPayload, employeeId]);
 
   useShortcut(["e"], () => setEditOpen(true), {
     description: "Edit employee",

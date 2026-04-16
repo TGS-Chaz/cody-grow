@@ -157,7 +157,7 @@ export default function FacilityFormModal({ open, onClose, onSave, editing }: Fa
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
               {/* Required fields */}
               <div className="space-y-4">
                 <Field label="Name" required error={errors.name}>

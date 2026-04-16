@@ -90,14 +90,26 @@ export function useEmployees() {
     let cancelled = false;
     setLoading(true);
     (async () => {
-      const { data: rows, error: err } = await supabase
-        .from("grow_employees")
-        .select("*, facility:grow_facilities(id, name)")
-        .eq("org_id", orgId)
-        .order("last_name");
+      // Two queries: fetch employees + fetch facilities (for name lookup), then combine client-side.
+      // Avoids PostgREST foreign-table-join 400s and keeps the hook robust if RLS on either table changes.
+      const [empRes, facRes] = await Promise.all([
+        supabase.from("grow_employees").select("*").eq("org_id", orgId).order("last_name"),
+        supabase.from("grow_facilities").select("id, name").eq("org_id", orgId),
+      ]);
       if (cancelled) return;
-      if (err) setError(err.message);
-      else { setError(null); setData((rows ?? []) as any as Employee[]); }
+      if (empRes.error) {
+        setError(empRes.error.message);
+        setLoading(false);
+        return;
+      }
+      const facilityById = new Map<string, { id: string; name: string }>();
+      (facRes.data ?? []).forEach((f: any) => facilityById.set(f.id, f));
+      const merged = (empRes.data ?? []).map((e: any) => ({
+        ...e,
+        facility: e.facility_id ? facilityById.get(e.facility_id) ?? null : null,
+      })) as Employee[];
+      setError(null);
+      setData(merged);
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -133,7 +145,7 @@ export function useEmployees() {
       const { data: row, error: err } = await supabase
         .from("grow_employees")
         .insert(payload)
-        .select("*, facility:grow_facilities(id, name)")
+        .select("*")
         .single();
       if (err) throw err;
       refresh();
@@ -150,7 +162,7 @@ export function useEmployees() {
         .from("grow_employees")
         .update(payload)
         .eq("id", id)
-        .select("*, facility:grow_facilities(id, name)")
+        .select("*")
         .single();
       if (err) throw err;
       refresh();
@@ -192,13 +204,32 @@ export function useEmployee(id: string | undefined) {
     (async () => {
       const { data: row, error: err } = await supabase
         .from("grow_employees")
-        .select("*, facility:grow_facilities(id, name)")
+        .select("*")
         .eq("id", id)
         .eq("org_id", orgId)
         .maybeSingle();
       if (cancelled) return;
-      if (err) setError(err.message);
-      else { setError(null); setData((row ?? null) as any as Employee | null); }
+      if (err) {
+        setError(err.message);
+        setLoading(false);
+        return;
+      }
+      let withFacility: Employee | null = null;
+      if (row) {
+        if ((row as any).facility_id) {
+          const { data: fac } = await supabase
+            .from("grow_facilities")
+            .select("id, name")
+            .eq("id", (row as any).facility_id)
+            .maybeSingle();
+          if (cancelled) return;
+          withFacility = { ...(row as any), facility: fac ?? null } as Employee;
+        } else {
+          withFacility = { ...(row as any), facility: null } as Employee;
+        }
+      }
+      setError(null);
+      setData(withFacility);
       setLoading(false);
     })();
     return () => { cancelled = true; };

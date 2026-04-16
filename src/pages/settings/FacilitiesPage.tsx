@@ -46,27 +46,32 @@ export default function FacilitiesPage() {
   const [editing, setEditing] = useState<Facility | null>(null);
   const { setContext, clearContext } = useCodyContext();
 
-  // Register Cody context
+  // Stable payload keyed on primitives so the setContext effect doesn't fire
+  // every render (which would cascade through the Cody context provider).
+  const facilitiesSignature = useMemo(() => facilities.map((f) => f.id).join(","), [facilities]);
+  const codyPayload = useMemo(
+    () => ({
+      count: stats.total,
+      active: stats.active,
+      expiringCount: stats.expiringIn30Days,
+      totalCanopy: stats.totalCanopy,
+      facilities: facilities.map((f) => ({
+        name: f.name,
+        license: f.license_number,
+        type: f.license_type,
+        city: f.city,
+        is_primary: f.is_primary,
+        is_active: f.is_active,
+      })),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [facilitiesSignature, stats.total, stats.active, stats.expiringIn30Days, stats.totalCanopy],
+  );
+
   useEffect(() => {
-    setContext({
-      context_type: "facilities_list",
-      page_data: {
-        count: stats.total,
-        active: stats.active,
-        expiringCount: stats.expiringIn30Days,
-        totalCanopy: stats.totalCanopy,
-        facilities: facilities.map((f) => ({
-          name: f.name,
-          license: f.license_number,
-          type: f.license_type,
-          city: f.city,
-          is_primary: f.is_primary,
-          is_active: f.is_active,
-        })),
-      },
-    });
+    setContext({ context_type: "facilities_list", page_data: codyPayload });
     return () => clearContext();
-  }, [setContext, clearContext, stats.total, stats.active, stats.expiringIn30Days, stats.totalCanopy, facilities]);
+  }, [setContext, clearContext, codyPayload]);
 
   // Keyboard shortcuts
   useShortcut(["n"], () => { setEditing(null); setModalOpen(true); }, {

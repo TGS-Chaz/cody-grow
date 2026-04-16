@@ -217,7 +217,7 @@ export default function EmployeeFormModal({ open, onClose, editing, onSave, take
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
               {/* Required block */}
               <div className="grid grid-cols-2 gap-3">
                 <Field label="First Name" required error={errors.first_name}>

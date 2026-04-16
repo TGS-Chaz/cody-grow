@@ -128,7 +128,7 @@ export default function EditMemberModal({ open, onClose, member, allRoles, assig
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+            <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-5">
               <div className="flex items-center gap-4">
                 <UserAvatar avatarUrl={member.avatar_url} initials={initials} size={56} />
                 <div className="min-w-0">

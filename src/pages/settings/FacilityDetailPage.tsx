@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -44,24 +44,28 @@ export default function FacilityDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const { setContext, clearContext } = useCodyContext();
 
-  useEffect(() => {
-    if (!facility) return;
-    setContext({
-      context_type: "facility_detail",
-      context_id: facility.id,
-      page_data: {
-        facility: {
-          name: facility.name,
-          license: facility.license_number,
-          type: facility.license_type,
-          address: `${facility.address_line1}, ${facility.city}, ${facility.state} ${facility.zip}`,
-          is_primary: facility.is_primary,
-          is_active: facility.is_active,
-        },
+  const facilityId = facility?.id ?? null;
+  const facilitySignature = facility?.updated_at ?? "";
+  const facilityPayload = useMemo(() => {
+    if (!facility) return null;
+    return {
+      facility: {
+        name: facility.name,
+        license: facility.license_number,
+        type: facility.license_type,
+        address: `${facility.address_line1}, ${facility.city}, ${facility.state} ${facility.zip}`,
+        is_primary: facility.is_primary,
+        is_active: facility.is_active,
       },
-    });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facilityId, facilitySignature]);
+
+  useEffect(() => {
+    if (!facilityPayload || !facilityId) return;
+    setContext({ context_type: "facility_detail", context_id: facilityId, page_data: facilityPayload });
     return () => clearContext();
-  }, [facility, setContext, clearContext]);
+  }, [setContext, clearContext, facilityPayload, facilityId]);
 
   if (loading) {
     return (

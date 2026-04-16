@@ -174,9 +174,9 @@ export default function RoleFormModal({ open, onClose, editing, allRoles, onCrea
             </div>
 
             {/* Body: two columns */}
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 min-h-0 flex overflow-hidden">
               {/* Left: form */}
-              <div className="w-[320px] shrink-0 p-6 border-r border-border overflow-y-auto space-y-4">
+              <div className="w-[320px] shrink-0 p-6 border-r border-border overflow-y-auto min-h-0 space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-[11px] uppercase tracking-wider font-medium text-muted-foreground">
                     Name{!isReadOnly && <span className="text-destructive ml-0.5">*</span>}
@@ -237,7 +237,7 @@ export default function RoleFormModal({ open, onClose, editing, allRoles, onCrea
               </div>
 
               {/* Right: permissions matrix */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 <div className="px-6 py-5 space-y-3">
                   {Array.from(grouped.entries()).map(([category, perms]) => {
                     const cfg = CATEGORY_COLORS[category] ?? { bg: "bg-gray-500/15", text: "text-gray-500", hex: "#6B7280" };

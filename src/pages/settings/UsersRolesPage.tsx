@@ -107,24 +107,28 @@ function MembersTab({ active }: { active: boolean }) {
   const [editTarget, setEditTarget] = useState<OrgMember | null>(null);
   const { setContext, clearContext } = useCodyContext();
 
+  const membersSignature = useMemo(() => members.map((m) => m.user_id).join(","), [members]);
+  const membersPayload = useMemo(
+    () => ({
+      count: stats.total,
+      owners: stats.owners,
+      recentlyActive: stats.recentlyActive,
+      members: members.map((m) => ({
+        email: m.email,
+        name: m.full_name ?? `${m.first_name ?? ""} ${m.last_name ?? ""}`.trim(),
+        role: m.role,
+        lastSignIn: m.last_sign_in_at,
+      })),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [membersSignature, stats.total, stats.owners, stats.recentlyActive],
+  );
+
   useEffect(() => {
     if (!active) return;
-    setContext({
-      context_type: "team_members_list",
-      page_data: {
-        count: stats.total,
-        owners: stats.owners,
-        recentlyActive: stats.recentlyActive,
-        members: members.map((m) => ({
-          email: m.email,
-          name: m.full_name ?? `${m.first_name ?? ""} ${m.last_name ?? ""}`.trim(),
-          role: m.role,
-          lastSignIn: m.last_sign_in_at,
-        })),
-      },
-    });
+    setContext({ context_type: "team_members_list", page_data: membersPayload });
     return () => clearContext();
-  }, [active, members, stats.total, stats.owners, stats.recentlyActive, setContext, clearContext]);
+  }, [active, setContext, clearContext, membersPayload]);
 
   useShortcut(["n"], () => setInviteOpen(true), {
     description: "Invite new member",
@@ -328,22 +332,31 @@ function RolesTab({ active }: { active: boolean }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Role | null>(null);
 
+  const rolesSignature = useMemo(() => roles.map((r) => r.id).join(","), [roles]);
+  const memberCountsSig = useMemo(() => Object.entries(memberCounts).map(([k, v]) => `${k}:${v}`).join(","), [memberCounts]);
+  const matrixSig = useMemo(
+    () => Object.entries(matrix).map(([k, v]) => `${k}:${v.size}`).join(","),
+    [matrix],
+  );
+  const rolesPayload = useMemo(
+    () => ({
+      roles: roles.map((r) => ({
+        name: r.name,
+        is_system: r.is_system_role,
+        description: r.description,
+        memberCount: memberCounts[r.id] ?? 0,
+        permissionCount: matrix[r.id]?.size ?? 0,
+      })),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rolesSignature, memberCountsSig, matrixSig],
+  );
+
   useEffect(() => {
     if (!active) return;
-    setContext({
-      context_type: "roles_list",
-      page_data: {
-        roles: roles.map((r) => ({
-          name: r.name,
-          is_system: r.is_system_role,
-          description: r.description,
-          memberCount: memberCounts[r.id] ?? 0,
-          permissionCount: matrix[r.id]?.size ?? 0,
-        })),
-      },
-    });
+    setContext({ context_type: "roles_list", page_data: rolesPayload });
     return () => clearContext();
-  }, [active, roles, memberCounts, matrix, setContext, clearContext]);
+  }, [active, setContext, clearContext, rolesPayload]);
 
   useShortcut(["n"], () => { setEditing(null); setFormOpen(true); }, {
     description: "Create custom role",
@@ -529,18 +542,22 @@ function MatrixTab({ active }: { active: boolean }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
+  const roleNamesKey = useMemo(() => roles.map((r) => r.name).join(","), [roles]);
+  const matrixPayload = useMemo(
+    () => ({
+      roleCount: roles.length,
+      permissionCount: permissions.length,
+      roleNames: roles.map((r) => r.name),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [roleNamesKey, roles.length, permissions.length],
+  );
+
   useEffect(() => {
     if (!active) return;
-    setContext({
-      context_type: "permissions_matrix",
-      page_data: {
-        roleCount: roles.length,
-        permissionCount: permissions.length,
-        roleNames: roles.map((r) => r.name),
-      },
-    });
+    setContext({ context_type: "permissions_matrix", page_data: matrixPayload });
     return () => clearContext();
-  }, [active, roles, permissions, setContext, clearContext]);
+  }, [active, setContext, clearContext, matrixPayload]);
 
   const filteredPermissions = useMemo(() => {
     const q = search.trim().toLowerCase();

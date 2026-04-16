@@ -77,23 +77,33 @@ export default function EmployeesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  // Build a stable page_data payload. We depend on a primitive signature
+  // (employee IDs + stats) rather than the employees array reference, which changes
+  // every time useEmployees refetches even if the contents are equivalent.
+  const employeesSignature = useMemo(
+    () => employees.map((e) => e.id).join(","),
+    [employees],
+  );
+  const codyPayload = useMemo(
+    () => ({
+      counts: stats,
+      employees: employees.map((e) => ({
+        name: `${e.first_name} ${e.last_name}`,
+        department: e.department,
+        status: e.employment_status,
+        job_title: e.job_title,
+        hasSystemAccess: !!e.user_id,
+        facility: e.facility?.name,
+      })),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [employeesSignature, stats.total, stats.active, stats.systemUsers, stats.licenseExpiring],
+  );
+
   useEffect(() => {
-    setContext({
-      context_type: "employees_list",
-      page_data: {
-        counts: stats,
-        employees: employees.map((e) => ({
-          name: `${e.first_name} ${e.last_name}`,
-          department: e.department,
-          status: e.employment_status,
-          job_title: e.job_title,
-          hasSystemAccess: !!e.user_id,
-          facility: e.facility?.name,
-        })),
-      },
-    });
+    setContext({ context_type: "employees_list", page_data: codyPayload });
     return () => clearContext();
-  }, [setContext, clearContext, employees, stats]);
+  }, [setContext, clearContext, codyPayload]);
 
   useShortcut(["n"], () => { setEditing(null); setModalOpen(true); }, {
     description: "Add new employee",
