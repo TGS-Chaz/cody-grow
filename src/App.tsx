@@ -47,6 +47,9 @@ import BatchesPage from "@/pages/inventory/BatchesPage";
 import BatchDetailPage from "@/pages/inventory/BatchDetailPage";
 import QAPage from "@/pages/inventory/QAPage";
 import QALotDetailPage from "@/pages/inventory/QALotDetailPage";
+import ProductionPage from "@/pages/inventory/ProductionPage";
+import ProductionRunDetailPage from "@/pages/inventory/ProductionRunDetailPage";
+import BOMDetailPage from "@/pages/inventory/BOMDetailPage";
 import { ShortcutsProvider } from "@/components/shared/KeyboardShortcuts";
 
 function ScrollToTop() {
@@ -100,7 +103,9 @@ export default function App() {
                     <Route path="/inventory/batches/:id" element={<BatchDetailPage />} />
                     <Route path="/inventory/qa" element={<QAPage />} />
                     <Route path="/inventory/qa/:id" element={<QALotDetailPage />} />
-                    <Route path="/inventory/production" element={<PlaceholderPage />} />
+                    <Route path="/inventory/production" element={<ProductionPage />} />
+                    <Route path="/inventory/production/bom/:id" element={<BOMDetailPage />} />
+                    <Route path="/inventory/production/:id" element={<ProductionRunDetailPage />} />
                     <Route path="/inventory/labels" element={<PlaceholderPage />} />
                     <Route path="/inventory/disposals" element={<PlaceholderPage />} />
 
