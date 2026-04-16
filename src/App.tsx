@@ -36,6 +36,7 @@ import ProductsPage from "@/pages/cultivation/ProductsPage";
 import ProductDetailPage from "@/pages/cultivation/ProductDetailPage";
 import SourcesPage from "@/pages/cultivation/SourcesPage";
 import SourceDetailPage from "@/pages/cultivation/SourceDetailPage";
+import GrowBoardPage from "@/pages/cultivation/GrowBoardPage";
 import { ShortcutsProvider } from "@/components/shared/KeyboardShortcuts";
 
 function ScrollToTop() {
@@ -74,7 +75,7 @@ export default function App() {
                     <Route path="/cultivation/products/:id" element={<ProductDetailPage />} />
                     <Route path="/cultivation/sources" element={<SourcesPage />} />
                     <Route path="/cultivation/sources/:id" element={<SourceDetailPage />} />
-                    <Route path="/cultivation/board" element={<PlaceholderPage />} />
+                    <Route path="/cultivation/board" element={<GrowBoardPage />} />
                     <Route path="/cultivation/plants" element={<PlaceholderPage />} />
                     <Route path="/cultivation/grow-cycles" element={<PlaceholderPage />} />
                     <Route path="/cultivation/harvests" element={<PlaceholderPage />} />

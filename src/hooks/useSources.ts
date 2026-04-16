@@ -166,6 +166,16 @@ export function useSources() {
     };
     const { data: row, error: err } = await supabase.from("grow_sources").insert(payload).select("*").single();
     if (err) throw err;
+    // Create a corresponding grow_board_cards row so the source appears on
+    // the Grow Board immediately. Upsert (vs insert) handles the rare case
+    // where a card already exists for this entity.
+    await supabase.from("grow_board_cards").upsert({
+      org_id: orgId,
+      column_name: "grow_sources",
+      entity_type: "grow_source",
+      entity_id: row.id,
+      sort_order: 0,
+    }, { onConflict: "column_name,entity_type,entity_id" });
     refresh();
     return row as Source;
   }, [orgId, refresh]);
@@ -472,6 +482,19 @@ export function usePromoteSource() {
       .update({ current_quantity: remaining, status: newStatus })
       .eq("id", source.id);
     if (uErr) throw uErr;
+
+    // If the source is fully promoted (depleted), remove its Grow Sources
+    // board card so it disappears from column 1. Partial promotions keep
+    // the source card visible since the remaining units are still available.
+    if (newStatus === "depleted") {
+      await supabase
+        .from("grow_board_cards")
+        .delete()
+        .eq("org_id", orgId)
+        .eq("column_name", "grow_sources")
+        .eq("entity_type", "grow_source")
+        .eq("entity_id", source.id);
+    }
 
     return {
       cycle_id: cycleId,

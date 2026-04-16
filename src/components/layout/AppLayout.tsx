@@ -44,11 +44,11 @@ const navGroups = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   ]},
   { label: "Cultivation", items: [
+    { to: "/cultivation/board", icon: LayoutGrid, label: "Grow Board" },
     { to: "/cultivation/strains", icon: Dna, label: "Strains" },
     { to: "/cultivation/areas", icon: MapPin, label: "Areas" },
     { to: "/cultivation/products", icon: Package, label: "Products" },
     { to: "/cultivation/sources", icon: Sprout, label: "Grow Sources" },
-    { to: "/cultivation/board", icon: LayoutGrid, label: "Grow Board" },
     { to: "/cultivation/plants", icon: Leaf, label: "Plants" },
     { to: "/cultivation/grow-cycles", icon: CalendarDays, label: "Grow Cycles" },
     { to: "/cultivation/harvests", icon: Scissors, label: "Harvests" },
