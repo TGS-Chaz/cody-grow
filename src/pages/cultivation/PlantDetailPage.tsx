@@ -28,6 +28,7 @@ import EmptyState from "@/components/shared/EmptyState";
 import PlantTimeline from "@/components/shared/PlantTimeline";
 import EnvironmentChart from "@/components/shared/EnvironmentChart";
 import CodyInsightsPanel from "@/components/cody/CodyInsightsPanel";
+import PlantPhotoAnalysis from "@/components/ai/PlantPhotoAnalysis";
 import { useShortcut } from "@/components/shared/KeyboardShortcuts";
 import { useCodyContext } from "@/hooks/useCodyContext";
 import {
@@ -507,6 +508,7 @@ function OverviewPanel({ plant, children, onAskCody }: { plant: Plant; children:
       </div>
 
       <div className="lg:col-span-1 space-y-4">
+        <PlantPhotoAnalysis contextPlantId={plant.plant_identifier ?? plant.id} />
         <CodyInsightsPanel />
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-2">

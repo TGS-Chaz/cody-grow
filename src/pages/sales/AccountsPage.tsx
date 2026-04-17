@@ -24,6 +24,8 @@ import {
 import { useAccountStatuses } from "@/hooks/useAccountStatuses";
 import { useRoutes } from "@/hooks/useRoutes";
 import { AccountModal } from "./AccountModal";
+import { RouteOptimizerModal } from "./RouteOptimizerModal";
+import { Route as RouteIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function AccountsPage() {
@@ -38,6 +40,7 @@ export default function AccountsPage() {
   const [search, setSearch] = useState("");
   const [modalAccount, setModalAccount] = useState<Account | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [routeModalOpen, setRouteModalOpen] = useState(false);
 
   useShortcut(["n"], () => { setModalAccount(null); setModalOpen(true); }, { description: "Add account", scope: "Accounts", enabled: !modalOpen });
   useShortcut(["/"], () => document.querySelector<HTMLInputElement>("[data-filters-search]")?.focus(), { description: "Focus search", scope: "Accounts" });
@@ -123,9 +126,14 @@ export default function AccountsPage() {
         description="Your wholesale customers"
         breadcrumbs={[{ label: "Sales & Fulfillment" }, { label: "Accounts" }]}
         actions={
-          <Button onClick={() => { setModalAccount(null); setModalOpen(true); }} className="gap-1.5">
-            <Plus className="w-3.5 h-3.5" /> Add Account
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setRouteModalOpen(true)} className="gap-1.5">
+              <RouteIcon className="w-3.5 h-3.5" /> Optimize Route
+            </Button>
+            <Button onClick={() => { setModalAccount(null); setModalOpen(true); }} className="gap-1.5">
+              <Plus className="w-3.5 h-3.5" /> Add Account
+            </Button>
+          </div>
         }
       />
 
@@ -180,6 +188,7 @@ export default function AccountsPage() {
       />
 
       <AccountModal open={modalOpen} onClose={() => setModalOpen(false)} account={modalAccount} onSuccess={() => refresh()} />
+      <RouteOptimizerModal open={routeModalOpen} onClose={() => setRouteModalOpen(false)} routeId={filters.route_id ?? null} routeName={routes.find((r) => r.id === filters.route_id)?.name ?? null} />
     </div>
   );
 }

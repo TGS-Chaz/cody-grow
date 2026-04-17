@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Barcode, Plus, Eye, MoreHorizontal, Scissors, Sliders, CheckCircle2, ShieldAlert,
+  Barcode, Plus, Eye, MoreHorizontal, Scissors, Sliders, CheckCircle2, ShieldAlert, Combine,
   PackageOpen, Heart, Scale, ShieldCheck, XCircle, Store, Send, Archive, Package,
   ShoppingCart,
 } from "lucide-react";
@@ -26,6 +26,7 @@ import {
   STRAIN_TYPE_COLORS, StrainType,
 } from "@/lib/schema-enums";
 import { CreateBatchModal, SublotModal, AdjustInventoryModal } from "./BatchModals";
+import { BlendBatchesModal } from "./BlendBatchesModal";
 import { cn } from "@/lib/utils";
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -55,6 +56,7 @@ export default function BatchesPage() {
   const [categoryFilter, setCategoryFilter] = useState<"" | CcrsInventoryCategory>("");
   const [qaFilter, setQaFilter] = useState<"" | "passed" | "failed" | "pending" | "not_required">("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [blendOpen, setBlendOpen] = useState(false);
   const [sublotBatch, setSublotBatch] = useState<Batch | null>(null);
   const [adjustBatch, setAdjustBatch] = useState<Batch | null>(null);
   const [selectedRows, setSelectedRows] = useState<Batch[]>([]);
@@ -323,9 +325,14 @@ export default function BatchesPage() {
         description="Track every batch from harvest to sale"
         breadcrumbs={[{ label: "Inventory" }, { label: "Batches" }]}
         actions={
-          <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
-            <Plus className="w-3.5 h-3.5" /> Create Batch
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setBlendOpen(true)} className="gap-1.5">
+              <Combine className="w-3.5 h-3.5" /> Blend Batches
+            </Button>
+            <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
+              <Plus className="w-3.5 h-3.5" /> Create Batch
+            </Button>
+          </div>
         }
       />
 
@@ -430,6 +437,7 @@ export default function BatchesPage() {
       <CreateBatchModal open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => refresh()} />
       <SublotModal open={!!sublotBatch} onClose={() => setSublotBatch(null)} parent={sublotBatch} onSuccess={() => refresh()} />
       <AdjustInventoryModal open={!!adjustBatch} onClose={() => setAdjustBatch(null)} batch={adjustBatch} onSuccess={() => refresh()} />
+      <BlendBatchesModal open={blendOpen} onClose={() => setBlendOpen(false)} initialBatches={selectedRows} onSuccess={() => { setSelectedRows([]); refresh(); }} />
     </div>
   );
 }

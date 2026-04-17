@@ -4,7 +4,6 @@ import { useAuth } from "@/lib/auth";
 import { useOrg } from "@/lib/org";
 import { generateExternalId } from "@/lib/ccrs-id";
 import type { OrderStatus, OrderSaleType } from "@/lib/schema-enums";
-import { validatePurchaseLimits, PurchaseLimitViolation } from "@/lib/validation/purchaseLimits";
 
 export interface Order {
   id: string;
@@ -520,42 +519,3 @@ export function useOrderStats(orders: Order[]) {
   }, [orders]);
 }
 
-/**
- * Live purchase-limit validation for retail orders. Pulls order items with
- * product category/type/unit_weight and runs them through the WA limits
- * validator. Returns violations that drive toast + banner UI.
- */
-export function useOrderPurchaseLimitCheck(orderId: string | undefined, saleType: OrderSaleType | null | undefined) {
-  const [violations, setViolations] = useState<PurchaseLimitViolation[]>([]);
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    if (!orderId || saleType !== "RecreationalRetail") { setViolations([]); return; }
-    let cancelled = false;
-    (async () => {
-      const { data: items } = await supabase.from("grow_order_items")
-        .select("quantity, product_id").eq("order_id", orderId);
-      const productIds = Array.from(new Set(((items ?? []) as any[]).map((i) => i.product_id).filter(Boolean)));
-      const { data: products } = productIds.length > 0
-        ? await supabase.from("grow_products").select("id, category, ccrs_inventory_type, unit_weight_grams, servings_per_unit").in("id", productIds)
-        : { data: [] };
-      const pById = new Map<string, any>((products ?? []).map((p: any) => [p.id, p]));
-      const enriched = ((items ?? []) as any[]).map((i) => {
-        const p = pById.get(i.product_id);
-        return {
-          quantity: Number(i.quantity ?? 0),
-          unit_weight_grams: p?.unit_weight_grams ?? null,
-          servings_per_unit: p?.servings_per_unit ?? null,
-          ccrs_inventory_type: p?.ccrs_inventory_type ?? null,
-          product_category: p?.category ?? null,
-        };
-      });
-      const result = validatePurchaseLimits(enriched);
-      if (!cancelled) setViolations(result.violations);
-    })();
-    return () => { cancelled = true; };
-  }, [orderId, saleType, tick]);
-
-  const refresh = useCallback(() => setTick((t) => t + 1), []);
-  return { violations, refresh };
-}

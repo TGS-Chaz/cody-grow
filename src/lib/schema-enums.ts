@@ -442,8 +442,8 @@ export type ManifestTransportationType = typeof MANIFEST_TRANSPORTATION_TYPES[nu
 export const ORDER_SALE_TYPES = ["RecreationalRetail", "RecreationalMedical", "Wholesale"] as const;
 export type OrderSaleType = typeof ORDER_SALE_TYPES[number];
 export const ORDER_SALE_TYPE_LABELS: Record<OrderSaleType, string> = {
-  RecreationalRetail: "Recreational Retail",
-  RecreationalMedical: "Recreational Medical",
+  RecreationalRetail: "Retail", // kept for CCRS edge cases — not surfaced in order UI
+  RecreationalMedical: "Medical",
   Wholesale: "Wholesale",
 };
 export const ORDER_STATUSES = [
@@ -785,17 +785,3 @@ export const WASTE_TYPES = [
 ] as const;
 export type WasteType = typeof WASTE_TYPES[number];
 
-// ─── WA Purchase Limits per RCW 69.50.360 ─────────────────────────────────────
-/** Per-consumer, per-transaction purchase limits for recreational retail.
- * These apply at the END consumer level — wholesale transactions are exempt,
- * but we validate anyway for retailers using our platform. */
-export const WA_PURCHASE_LIMITS = {
-  usable_cannabis: { amount: 1, unit: "oz", grams: 28.35 },
-  cannabis_concentrates: { amount: 7, unit: "g", grams: 7 },
-  cannabis_infused_liquid: { amount: 72, unit: "oz", grams: null },
-  cannabis_infused_solid: { amount: 16, unit: "oz", grams: null },
-  cannabis_topicals: { amount: 1, unit: "compound", grams: null },
-  cannabis_tinctures: { amount: 1, unit: "compound", grams: null },
-} as const;
-
-export type WaPurchaseLimitKey = keyof typeof WA_PURCHASE_LIMITS;

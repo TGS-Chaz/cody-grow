@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   FileText, Loader2, Download, Copy, Printer, Send, Archive, MoreHorizontal, Truck, Building2,
-  CalendarDays, User, Activity, ShieldCheck, Package, XCircle,
+  CalendarDays, User, Activity, ShieldCheck, Package, XCircle, RotateCcw,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ import {
 } from "@/hooks/useManifests";
 import { useProfile } from "@/lib/profile";
 import { generateManifestCSV, generateManifestCSVFilename } from "@/lib/ccrs/generateManifestCSV";
+import { ProcessReturnModal } from "./ProcessReturnModal";
 import { generateWCIAJSON } from "@/lib/ccrs/generateWCIAJSON";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +48,7 @@ export default function ManifestDetailPage() {
   const { data: items, loading: itemsLoading } = useManifestItems(id);
   const update = useUpdateManifest();
   const cancel = useCancelManifest();
+  const [returnOpen, setReturnOpen] = useState(false);
   const { profile } = useProfile();
 
   useEffect(() => {
@@ -207,6 +209,11 @@ export default function ManifestDetailPage() {
                 <DropdownMenuItem onClick={async () => { try { await update(manifest.id, { ccrs_submitted_at: new Date().toISOString(), status: "uploaded_to_ccrs" } as any); toast.success("Marked uploaded"); refresh(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } }}>
                   <ShieldCheck className="w-3.5 h-3.5" /> Mark CCRS Uploaded (stub)
                 </DropdownMenuItem>
+                {manifest.manifest_type === "outbound" && manifest.status === "accepted" && (
+                  <DropdownMenuItem onClick={() => setReturnOpen(true)}>
+                    <RotateCcw className="w-3.5 h-3.5" /> Process Return
+                  </DropdownMenuItem>
+                )}
                 {manifest.status !== "cancelled" && manifest.status !== "accepted" && (
                   <DropdownMenuItem onClick={async () => { try { await cancel(manifest.id); toast.success("Cancelled"); refresh(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } }} className="text-destructive">
                     <XCircle className="w-3.5 h-3.5" /> Cancel
@@ -293,6 +300,8 @@ export default function ManifestDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <ProcessReturnModal open={returnOpen} onClose={() => setReturnOpen(false)} sourceManifestId={manifest.id} onSuccess={() => refresh()} />
     </div>
   );
 }

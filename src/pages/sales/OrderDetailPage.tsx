@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ShoppingCart, Loader2, Send, Package, Truck, CheckCircle2, XCircle, Activity, MoreHorizontal,
-  Plus, Trash2, Building2, DollarSign, FileText, Edit, ArrowRight, AlertCircle,
+  Plus, Trash2, Building2, DollarSign, FileText, Edit, ArrowRight,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -21,10 +21,9 @@ import { useCodyContext } from "@/hooks/useCodyContext";
 import {
   useOrder, useOrderItems, useOrderAllocations, useAllocateOrder, useDeallocateOrder,
   useSubmitOrder, useReleaseOrder, useCompleteOrder, useCancelOrder, useRemoveOrderItem,
-  useAllocatePackedSublot, useOrderPurchaseLimitCheck,
+  useAllocatePackedSublot,
   Order, OrderItem, OrderAllocation, PackToOrderSuggestion,
 } from "@/hooks/useOrders";
-import type { PurchaseLimitViolation } from "@/lib/validation/purchaseLimits";
 import { PackagingModal } from "@/pages/inventory/PackagingModal";
 import type { Batch } from "@/hooks/useBatches";
 import { ORDER_SALE_TYPE_LABELS, OrderSaleType } from "@/lib/schema-enums";
@@ -68,25 +67,10 @@ export default function OrderDetailPage() {
   const cancel = useCancelOrder();
   const removeItem = useRemoveOrderItem();
   const allocatePacked = useAllocatePackedSublot();
-  const { violations: limitViolations, refresh: refreshLimits } = useOrderPurchaseLimitCheck(id, order?.sale_type);
 
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [packSuggestions, setPackSuggestions] = useState<PackToOrderSuggestion[]>([]);
   const [packingForItem, setPackingForItem] = useState<{ item_id: string; qty: number; source: Batch } | null>(null);
-  const [lastViolationKey, setLastViolationKey] = useState<string>("");
-
-  // Toast on new violations
-  useEffect(() => {
-    if (limitViolations.length === 0) { setLastViolationKey(""); return; }
-    const key = limitViolations.map((v) => `${v.bucket}:${v.ordered}`).join("|");
-    if (key === lastViolationKey) return;
-    setLastViolationKey(key);
-    for (const v of limitViolations) {
-      toast.warning(`Purchase limit exceeded: ${v.bucketLabel}`, {
-        description: `${v.ordered.toFixed(1)}${v.unit} ordered · WA limit is ${v.limit}${v.unit}`,
-      });
-    }
-  }, [limitViolations, lastViolationKey]);
 
   const { setContext, clearContext } = useCodyContext();
   const payload = useMemo(() => {
@@ -237,10 +221,9 @@ export default function OrderDetailPage() {
             order={order}
             loading={itemsLoading}
             onAdd={() => setAddItemOpen(true)}
-            onRemove={async (itemId) => { try { await removeItem(itemId, order.id); toast.success("Removed"); refreshItems(); refresh(); refreshLimits(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } }}
+            onRemove={async (itemId) => { try { await removeItem(itemId, order.id); toast.success("Removed"); refreshItems(); refresh(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } }}
             canEdit={order.status === "draft"}
             fullyAllocated={fullyAllocated}
-            limitViolations={limitViolations}
           />
         </TabsContent>
         <TabsContent value="allocations">
@@ -270,7 +253,7 @@ export default function OrderDetailPage() {
         </TabsContent>
       </Tabs>
 
-      <AddOrderItemModal open={addItemOpen} onClose={() => setAddItemOpen(false)} orderId={order.id} saleType={order.sale_type as OrderSaleType | null} onSuccess={() => { refreshItems(); refresh(); refreshLimits(); }} />
+      <AddOrderItemModal open={addItemOpen} onClose={() => setAddItemOpen(false)} orderId={order.id} saleType={order.sale_type as OrderSaleType | null} onSuccess={() => { refreshItems(); refresh(); }} />
 
       <PackagingModal
         open={!!packingForItem}
@@ -293,9 +276,8 @@ export default function OrderDetailPage() {
 }
 
 // ─── Items panel ────────────────────────────────────────────────────────────
-function ItemsPanel({ items, order, loading, onAdd, onRemove, canEdit, fullyAllocated, limitViolations }: {
+function ItemsPanel({ items, order, loading, onAdd, onRemove, canEdit, fullyAllocated }: {
   items: OrderItem[]; order: Order; loading: boolean; onAdd: () => void; onRemove: (id: string) => void; canEdit: boolean; fullyAllocated: boolean;
-  limitViolations: PurchaseLimitViolation[];
 }) {
   const navigate = useNavigate();
   const columns: ColumnDef<OrderItem>[] = useMemo(() => [
@@ -340,25 +322,6 @@ function ItemsPanel({ items, order, loading, onAdd, onRemove, canEdit, fullyAllo
 
   return (
     <div className="space-y-3">
-      {limitViolations.length > 0 && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
-          <div className="flex items-start gap-2 mb-2">
-            <AlertCircle className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
-            <div className="flex-1">
-              <div className="text-[13px] font-semibold text-foreground">Exceeds WA retail purchase limits</div>
-              <div className="text-[11px] text-muted-foreground mt-0.5">Limits apply per end-consumer per transaction. If this order is for retail resale, the retailer handles compliance.</div>
-            </div>
-          </div>
-          <ul className="text-[12px] space-y-1 mt-2 pl-6">
-            {limitViolations.map((v) => (
-              <li key={v.bucket} className="flex items-center justify-between gap-3">
-                <span><span className="font-semibold">{v.bucketLabel}</span>: <span className="font-mono">{v.ordered.toFixed(1)}{v.unit}</span> ordered</span>
-                <span className="text-muted-foreground font-mono text-[11px]">WA limit: {v.limit}{v.unit}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h3 className="text-[13px] font-semibold">Line items</h3>

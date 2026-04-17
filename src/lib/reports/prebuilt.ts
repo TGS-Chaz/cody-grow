@@ -274,6 +274,32 @@ export const PREBUILT_REPORTS: PrebuiltReport[] = [
     ],
   },
 
+  {
+    key: "sales_commissions",
+    name: "Sales Rep Commissions",
+    description: "Per-rep revenue and commission earned for completed orders.",
+    category: "labor",
+    icon: "DollarSign",
+    query_config: {
+      data_source: "grow_orders",
+      date_field: "completed_at",
+      filters: [{ field: "status", op: "eq", value: "completed" }],
+      group_by: "created_by",
+      aggregates: [
+        { field: "total", kind: "sum", alias: "revenue" },
+        { field: "id", kind: "count", alias: "order_count" },
+      ],
+    },
+    columns_config: [
+      { field: "rep_name", label: "Sales Rep" },
+      { field: "order_count", label: "Orders", format: "number" },
+      { field: "revenue", label: "Revenue", format: "currency" },
+      { field: "commission_amount", label: "Commission", format: "currency" },
+    ],
+    chart_config: { type: "bar", x_field: "rep_name", y_field: "commission_amount" },
+    filters_config: [{ field: "date_range", label: "Date range", type: "date_range" }],
+  },
+
   // ─── Financial (1) ────────────────────────────────────────────────────────
   {
     key: "ar_aging",

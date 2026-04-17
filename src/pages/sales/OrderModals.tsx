@@ -7,7 +7,16 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useOrg } from "@/lib/org";
 import { useCreateOrder, useAddOrderItem, Order, OrderItem } from "@/hooks/useOrders";
-import { ORDER_SALE_TYPES, ORDER_SALE_TYPE_LABELS, OrderSaleType } from "@/lib/schema-enums";
+import { OrderSaleType } from "@/lib/schema-enums";
+
+/** Wholesale-only sale types. RecreationalRetail stays in the enum for CCRS edge
+ * cases but isn't featured in the order creation UI — Cody Grow is a producer
+ * platform, not a POS. "Medical" maps to 'RecreationalMedical' (WA's term for
+ * medical wholesale with excise tax exemption for DOH-compliant products). */
+const WHOLESALE_SALE_TYPES: Array<{ value: OrderSaleType; label: string; hint: string }> = [
+  { value: "Wholesale", label: "Wholesale", hint: "Standard B2B sale to a licensed retailer or processor" },
+  { value: "RecreationalMedical", label: "Medical", hint: "Sale of DOH-compliant product — tax exempt for qualifying patients" },
+];
 import { cn } from "@/lib/utils";
 
 export function CreateOrderModal({ open, onClose, onSuccess, initialAccountId }: {
@@ -85,12 +94,12 @@ export function CreateOrderModal({ open, onClose, onSuccess, initialAccountId }:
         </Field>
         <Field label="Sale type" required>
           <div className="inline-flex rounded-lg border border-border bg-muted/30 p-0.5 w-full">
-            {ORDER_SALE_TYPES.map((t) => (
-              <button key={t} type="button" onClick={() => setSaleType(t)} className={cn(
+            {WHOLESALE_SALE_TYPES.map((t) => (
+              <button key={t.value} type="button" onClick={() => setSaleType(t.value)} title={t.hint} className={cn(
                 "flex-1 h-9 text-[12px] font-medium rounded-md transition-colors",
-                saleType === t ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                saleType === t.value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
               )}>
-                {ORDER_SALE_TYPE_LABELS[t]}
+                {t.label}
               </button>
             ))}
           </div>

@@ -23,6 +23,8 @@ import {
 } from "@/hooks/useAccounts";
 import { useNoteAttributes } from "@/hooks/useNoteAttributes";
 import { AccountModal } from "./AccountModal";
+import AccountCreditPanel from "./AccountCreditPanel";
+import AccountAIInsights from "@/components/ai/AccountAIInsights";
 import { cn } from "@/lib/utils";
 
 export default function AccountDetailPage() {
@@ -159,6 +161,7 @@ export default function AccountDetailPage() {
           <TabsTrigger value="notes">Notes ({notes.length})</TabsTrigger>
           <TabsTrigger value="contacts">Contacts</TabsTrigger>
           <TabsTrigger value="pricing">Pricing ({priceLists.length})</TabsTrigger>
+          <TabsTrigger value="credit">Credit</TabsTrigger>
           <TabsTrigger value="fleet">Fleet</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
@@ -175,6 +178,7 @@ export default function AccountDetailPage() {
         </TabsContent>
         <TabsContent value="contacts"><ContactsPanel account={account} /></TabsContent>
         <TabsContent value="pricing"><PricingPanel priceLists={priceLists} /></TabsContent>
+        <TabsContent value="credit"><AccountCreditPanel accountId={account.id} /></TabsContent>
         <TabsContent value="fleet"><FleetPanel drivers={drivers} vehicles={vehicles} /></TabsContent>
         <TabsContent value="activity">
           <div className="rounded-xl border border-border bg-card p-12 text-center">
@@ -235,16 +239,12 @@ function OverviewPanel({ account, orders }: { account: Account; orders: any[] })
       </div>
 
       <div className="space-y-4">
-        <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Notes</h3>
-          {daysSince != null && daysSince > 45 && (
-            <p className="text-[12px] text-amber-500">This account hasn't ordered in {daysSince} days. Consider reaching out.</p>
-          )}
-          {monthOrders.length === 0 && orders.length > 0 && (
-            <p className="text-[12px]">No orders this month — last order {account.last_order_at ? new Date(account.last_order_at).toLocaleDateString() : "never"}.</p>
-          )}
-          {account.is_non_cannabis && <p className="text-[12px]">Non-cannabis account — no CCRS reporting required.</p>}
-        </div>
+        <AccountAIInsights accountId={account.id} />
+        {account.is_non_cannabis && (
+          <div className="rounded-xl border border-border bg-card p-4 text-[12px] text-muted-foreground">
+            Non-cannabis account — no CCRS reporting required.
+          </div>
+        )}
       </div>
     </div>
   );

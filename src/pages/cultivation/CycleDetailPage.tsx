@@ -24,6 +24,7 @@ import DateTime from "@/components/shared/DateTime";
 import EmptyState from "@/components/shared/EmptyState";
 import EnvironmentChart from "@/components/shared/EnvironmentChart";
 import CodyInsightsPanel from "@/components/cody/CodyInsightsPanel";
+import CycleAIInsights from "@/components/ai/CycleAIInsights";
 import { useShortcut } from "@/components/shared/KeyboardShortcuts";
 import { useCodyContext } from "@/hooks/useCodyContext";
 import {
@@ -295,7 +296,12 @@ export default function CycleDetailPage() {
           <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview"><OverviewPanel cycle={cycle} plants={plants} yieldMetrics={yieldMetrics} /></TabsContent>
+        <TabsContent value="overview">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2"><OverviewPanel cycle={cycle} plants={plants} yieldMetrics={yieldMetrics} /></div>
+            <div><CycleAIInsights cycleId={cycle.id} phase={cycle.phase} /></div>
+          </div>
+        </TabsContent>
         <TabsContent value="plants"><PlantsPanel cycleId={cycle.id} plants={plants} /></TabsContent>
         <TabsContent value="environmental"><EnvironmentalPanel cycle={cycle} readings={envReadings} /></TabsContent>
         <TabsContent value="harvests"><HarvestsPanel cycle={cycle} harvests={harvests} onHarvest={() => setHarvestOpen(true)} /></TabsContent>

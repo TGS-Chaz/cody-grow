@@ -10,6 +10,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import OrgHeader from "@/components/shared/OrgHeader";
 import DateTime from "@/components/shared/DateTime";
 import CodyInsightsPanel from "@/components/cody/CodyInsightsPanel";
+import DemandForecastCard from "@/components/ai/DemandForecastCard";
 import {
   useDashboardStats, useUpcomingHarvests, useTodaysTasks, useRecentActivity, useEnvironmentalAlerts,
 } from "@/hooks/useDashboard";
@@ -156,8 +157,11 @@ export default function Dashboard() {
         </PanelCard>
       </div>
 
-      {/* Row 4: Cody Insights */}
-      <CodyInsightsPanel />
+      {/* Row 4: AI Intelligence */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <DemandForecastCard daysAhead={30} />
+        <CodyInsightsPanel />
+      </div>
     </div>
   );
 }

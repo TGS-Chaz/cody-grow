@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { FileText, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, Loader2, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { toast } from "sonner";
 import ScrollableModal, { ModalHeader } from "@/components/ui/scrollable-modal";
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,7 @@ export function CreateManifestModal({ open, onClose, onSuccess, initialOrderId, 
   const [saving, setSaving] = useState(false);
 
   const [orders, setOrders] = useState<Array<{ id: string; order_number: string; account_id: string; status: string | null }>>([]);
-  const [accounts, setAccounts] = useState<Array<{ id: string; company_name: string; license_number: string | null; address_line1: string | null; city: string | null; state: string | null; zip: string | null; primary_contact_phone: string | null; primary_contact_email: string | null }>>([]);
+  const [accounts, setAccounts] = useState<Array<{ id: string; company_name: string; license_number: string | null; address_line1: string | null; city: string | null; state: string | null; zip: string | null; primary_contact_phone: string | null; primary_contact_email: string | null; preferred_delivery_days?: string[] | null; preferred_delivery_window?: string | null }>>([]);
   const [drivers, setDrivers] = useState<Array<{ id: string; first_name: string | null; last_name: string | null; license_number: string | null; phone: string | null; driver_type: string | null }>>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [routes, setRoutes] = useState<Array<{ id: string; name: string; color: string | null }>>([]);
@@ -77,7 +77,7 @@ export function CreateManifestModal({ open, onClose, onSuccess, initialOrderId, 
     (async () => {
       const [ordersRes, accountsRes, driversRes, vehiclesRes, routesRes, facilitiesRes] = await Promise.all([
         supabase.from("grow_orders").select("id, order_number, account_id, status").eq("org_id", orgId).in("status", ["allocated", "packaged"]).order("created_at", { ascending: false }),
-        supabase.from("grow_accounts").select("id, company_name, license_number, address_line1, city, state, zip, primary_contact_phone, primary_contact_email").eq("org_id", orgId),
+        supabase.from("grow_accounts").select("id, company_name, license_number, address_line1, city, state, zip, primary_contact_phone, primary_contact_email, preferred_delivery_days, preferred_delivery_window").eq("org_id", orgId),
         supabase.from("grow_drivers").select("id, first_name, last_name, license_number, phone, driver_type").eq("org_id", orgId).eq("is_active", true),
         supabase.from("grow_vehicles").select("*").eq("org_id", orgId).eq("is_active", true),
         supabase.from("grow_routes").select("id, name, color").eq("org_id", orgId).order("name"),
@@ -267,6 +267,25 @@ export function CreateManifestModal({ open, onClose, onSuccess, initialOrderId, 
                   <Field label="Departure" required><Input type="datetime-local" value={departure} onChange={(e) => setDeparture(e.target.value)} /></Field>
                   <Field label="Estimated arrival"><Input type="datetime-local" value={arrival} onChange={(e) => setArrival(e.target.value)} /></Field>
                 </div>
+                {(() => {
+                  const prefDays = selectedAccount?.preferred_delivery_days ?? [];
+                  const prefWindow = selectedAccount?.preferred_delivery_window;
+                  if (!departure || (!prefDays.length && !prefWindow)) return null;
+                  const dep = new Date(departure);
+                  const depDay = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][dep.getDay()];
+                  const mismatch = prefDays.length > 0 && !prefDays.includes(depDay);
+                  if (!mismatch && !prefWindow) return null;
+                  return (
+                    <div className={cn("rounded-lg border p-3 text-[11px] flex items-start gap-2",
+                      mismatch ? "border-amber-500/30 bg-amber-500/5 text-amber-500" : "border-border bg-muted/30")}>
+                      <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                      <span>
+                        {mismatch && <>Note: {selectedAccount?.company_name} prefers deliveries on <span className="font-semibold capitalize">{prefDays.join(", ")}</span>. This manifest is scheduled for <span className="font-semibold capitalize">{depDay}</span>. </>}
+                        {prefWindow && <>Preferred window: <span className="font-semibold">{prefWindow}</span>.</>}
+                      </span>
+                    </div>
+                  );
+                })()}
               </Section>
 
               <Field label="Notes">

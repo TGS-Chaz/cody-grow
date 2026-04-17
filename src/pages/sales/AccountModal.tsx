@@ -10,6 +10,7 @@ import { useOrg } from "@/lib/org";
 import { useCreateAccount, useUpdateAccount, Account, AccountInput } from "@/hooks/useAccounts";
 import { useAccountStatuses } from "@/hooks/useAccountStatuses";
 import { useRoutes } from "@/hooks/useRoutes";
+import { cn } from "@/lib/utils";
 
 const LICENSE_TYPES = [
   { value: "retailer", label: "Retailer" },
@@ -22,6 +23,7 @@ const LICENSE_TYPES = [
 ];
 
 const PAYMENT_TERMS = ["COD", "Net 15", "Net 30", "Net 45", "Net 60"];
+const DELIVERY_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 export function AccountModal({ open, onClose, onSuccess, account }: {
   open: boolean; onClose: () => void; onSuccess?: (a: Account) => void; account?: Account | null;
@@ -205,6 +207,26 @@ export function AccountModal({ open, onClose, onSuccess, account }: {
                   <input type="checkbox" checked={form.is_non_cannabis ?? false} onChange={(e) => setField("is_non_cannabis", e.target.checked)} className="w-4 h-4 rounded border-border accent-primary" />
                   <span className="text-[12px] font-medium">Non-cannabis account</span>
                 </label>
+              </Section>
+
+              <Section title="Delivery">
+                <Field label="Preferred delivery days">
+                  <div className="flex gap-1 flex-wrap">
+                    {DELIVERY_DAYS.map((d) => {
+                      const current: string[] = (form as any).preferred_delivery_days ?? [];
+                      const selected = current.includes(d);
+                      return (
+                        <button key={d} type="button" onClick={() => {
+                          const next = selected ? current.filter((x) => x !== d) : [...current, d];
+                          setField("preferred_delivery_days" as any, next as any);
+                        }} className={cn("h-8 px-3 rounded-lg border text-[11px] font-semibold capitalize transition-all", selected ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground")}>
+                          {d.slice(0, 3)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </Field>
+                <Field label="Delivery window"><Input value={(form as any).preferred_delivery_window ?? ""} onChange={(e) => setField("preferred_delivery_window" as any, e.target.value as any)} placeholder="e.g. 9am-2pm" /></Field>
               </Section>
             </motion.div>
           )}

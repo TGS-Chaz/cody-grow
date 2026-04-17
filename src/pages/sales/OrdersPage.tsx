@@ -152,8 +152,7 @@ export default function OrdersPage() {
             <select value={filters.sale_type ?? ""} onChange={(e) => setFilters((f) => ({ ...f, sale_type: e.target.value as OrderSaleType || undefined }))} className="h-9 px-3 text-[12px] rounded-md bg-background border border-border">
               <option value="">All types</option>
               <option value="Wholesale">Wholesale</option>
-              <option value="RecreationalRetail">Recreational Retail</option>
-              <option value="RecreationalMedical">Recreational Medical</option>
+              <option value="RecreationalMedical">Medical</option>
             </select>
           </div>
         }
