@@ -21,6 +21,7 @@ import EmptyState from "@/components/shared/EmptyState";
 import CopyableId from "@/components/shared/CopyableId";
 import BarcodeRenderer from "@/components/shared/BarcodeRenderer";
 import CodyInsightsPanel from "@/components/cody/CodyInsightsPanel";
+import BatchBriefPanel from "@/components/cody/BatchBriefPanel";
 import { useShortcut } from "@/components/shared/KeyboardShortcuts";
 import { useCodyContext } from "@/hooks/useCodyContext";
 import {
@@ -445,6 +446,7 @@ function OverviewPanel({ batch, ageDays }: { batch: Batch; ageDays: number | nul
       </div>
 
       <div className="space-y-4">
+        <BatchBriefPanel batchId={batch.id} />
         <BatchPricingCard batch={batch} />
         <CodyInsightsPanel entity_type="batch" entity_id={batch.id} />
         <div className="rounded-xl border border-border bg-card p-4 space-y-2 text-[12px]">
