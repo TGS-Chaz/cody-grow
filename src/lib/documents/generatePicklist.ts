@@ -20,6 +20,7 @@ interface PicklistData {
   account_license: string | null;
   generated_at: string;
   org_name: string | null;
+  delivery_notes: string | null;
   lines_by_area: Record<string, PicklistLine[]>;
 }
 
@@ -30,7 +31,7 @@ interface PicklistData {
 export async function generatePicklist(orderId: string, _opts: PicklistOptions = {}): Promise<string> {
   const { data: order, error: oErr } = await supabase
     .from("grow_orders")
-    .select("id, order_number, org_id, account_id, status")
+    .select("id, order_number, org_id, account_id, status, delivery_notes")
     .eq("id", orderId)
     .single();
   if (oErr || !order) throw new Error(oErr?.message ?? "Order not found");
@@ -98,6 +99,7 @@ export async function generatePicklist(orderId: string, _opts: PicklistOptions =
     account_license: (account as any)?.license_number ?? null,
     generated_at: new Date().toISOString(),
     org_name: (org as any)?.name ?? null,
+    delivery_notes: (order as any).delivery_notes ?? null,
     lines_by_area: linesByArea,
   };
 
@@ -154,6 +156,7 @@ function renderPicklistHTML(data: PicklistData): string {
       <div><strong>Generated:</strong> ${date.toLocaleString()}</div>
     </div>
   </div>
+  ${data.delivery_notes ? `<div style="margin:0 0 16px 0;padding:10px 12px;border-left:3px solid #f59e0b;background:#fef3c7;border-radius:4px;"><strong style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#92400e;">Delivery notes</strong><div style="font-size:12px;margin-top:2px;white-space:pre-wrap;">${esc(data.delivery_notes)}</div></div>` : ""}
 
   ${areas.length === 0 ? `<p style="color:#999;font-style:italic;">No allocations on this order yet.</p>` : areas.map((area) => {
     const lines = data.lines_by_area[area];

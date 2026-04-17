@@ -29,6 +29,7 @@ import EquipmentDetailPage from "@/pages/settings/EquipmentDetailPage";
 import CCRSSettingsPage from "@/pages/settings/CCRSSettingsPage";
 import AIPreferencesPage from "@/pages/settings/AIPreferencesPage";
 import IntegrationsPage from "@/pages/settings/IntegrationsPage";
+import SOPsPage from "@/pages/settings/SOPsPage";
 import StrainsPage from "@/pages/cultivation/StrainsPage";
 import StrainDetailPage from "@/pages/cultivation/StrainDetailPage";
 import AreasPage from "@/pages/cultivation/AreasPage";
@@ -62,6 +63,7 @@ import CCRSDashboardPage from "@/pages/compliance/CCRSDashboardPage";
 import AuditLogPage from "@/pages/compliance/AuditLogPage";
 import DisposalsPage from "@/pages/compliance/DisposalsPage";
 import LabelsPage from "@/pages/compliance/LabelsPage";
+import DocumentsPage from "@/pages/compliance/DocumentsPage";
 import TasksPage from "@/pages/operations/TasksPage";
 import GrowLogsPage from "@/pages/operations/GrowLogsPage";
 import ReportsPage from "@/pages/reports/ReportsPage";
@@ -155,6 +157,7 @@ export default function App() {
                     <Route path="/compliance/audit" element={<AuditLogPage />} />
                     <Route path="/compliance/disposals" element={<DisposalsPage />} />
                     <Route path="/compliance/labels" element={<LabelsPage />} />
+                    <Route path="/compliance/documents" element={<DocumentsPage />} />
                     <Route path="/compliance/recalls" element={<RecallsPage />} />
                     <Route path="/compliance/recalls/:id" element={<RecallDetailPage />} />
                     <Route path="/compliance/manifests" element={<PlaceholderPage />} />
@@ -189,6 +192,7 @@ export default function App() {
                     <Route path="/settings/ai" element={<AIPreferencesPage />} />
                     <Route path="/settings/import" element={<ImportPage />} />
                     <Route path="/settings/integrations" element={<IntegrationsPage />} />
+                    <Route path="/settings/sops" element={<SOPsPage />} />
                     <Route path="/settings/strains" element={<PlaceholderPage />} />
                     <Route path="/settings/areas" element={<PlaceholderPage />} />
 

@@ -29,6 +29,7 @@ import PlantTimeline from "@/components/shared/PlantTimeline";
 import EnvironmentChart from "@/components/shared/EnvironmentChart";
 import CodyInsightsPanel from "@/components/cody/CodyInsightsPanel";
 import PlantPhotoAnalysis from "@/components/ai/PlantPhotoAnalysis";
+import InlineAIEdit from "@/components/ai/InlineAIEdit";
 import { useShortcut } from "@/components/shared/KeyboardShortcuts";
 import { useCodyContext } from "@/hooks/useCodyContext";
 import {
@@ -92,6 +93,7 @@ export default function PlantDetailPage() {
   const { data: children } = usePlantChildren(id);
 
   const [editOpen, setEditOpen] = useState(false);
+  const [aiEditOpen, setAiEditOpen] = useState(false);
   const [phaseOpen, setPhaseOpen] = useState(false);
   const [destroyOpen, setDestroyOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
@@ -221,6 +223,9 @@ export default function PlantDetailPage() {
             </Button>
             <Button variant="outline" onClick={() => setEditOpen(true)} className="gap-1.5" title="Edit (E)">
               <Edit className="w-3.5 h-3.5" /> Edit
+            </Button>
+            <Button variant="outline" onClick={() => setAiEditOpen(true)} className="gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-primary" /> Edit with Cody
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -370,6 +375,17 @@ export default function PlantDetailPage() {
 
       {/* Modals */}
       <PlantFormModal open={editOpen} onClose={() => setEditOpen(false)} editing={plant} onSave={handleSaveEdit} />
+      <InlineAIEdit
+        open={aiEditOpen}
+        onClose={() => setAiEditOpen(false)}
+        entityType="plant"
+        entity={plant as unknown as Record<string, unknown>}
+        editableFields={["plant_identifier", "notes", "is_mother_plant", "harvest_cycle_months", "harvest_date"]}
+        onApply={async (_m, patch) => {
+          await updatePlant(plant.id, patch as any);
+          refresh();
+        }}
+      />
       <PlantPhaseChangeModal
         open={phaseOpen}
         onClose={() => setPhaseOpen(false)}

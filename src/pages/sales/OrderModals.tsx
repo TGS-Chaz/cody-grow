@@ -29,8 +29,9 @@ export function CreateOrderModal({ open, onClose, onSuccess, initialAccountId }:
   const [isTradeSample, setIsTradeSample] = useState(false);
   const [isNonCannabis, setIsNonCannabis] = useState(false);
   const [notes, setNotes] = useState("");
+  const [deliveryNotes, setDeliveryNotes] = useState("");
   const [saving, setSaving] = useState(false);
-  const [accounts, setAccounts] = useState<Array<{ id: string; company_name: string; license_number: string | null; is_non_cannabis: boolean | null }>>([]);
+  const [accounts, setAccounts] = useState<Array<{ id: string; company_name: string; license_number: string | null; is_non_cannabis: boolean | null; default_delivery_notes: string | null }>>([]);
 
   useEffect(() => {
     if (!open || !orgId) return;
@@ -39,8 +40,9 @@ export function CreateOrderModal({ open, onClose, onSuccess, initialAccountId }:
     setIsTradeSample(false);
     setIsNonCannabis(false);
     setNotes("");
+    setDeliveryNotes("");
     (async () => {
-      const { data } = await supabase.from("grow_accounts").select("id, company_name, license_number, is_non_cannabis").eq("org_id", orgId).eq("is_active", true).order("company_name");
+      const { data } = await supabase.from("grow_accounts").select("id, company_name, license_number, is_non_cannabis, default_delivery_notes").eq("org_id", orgId).eq("is_active", true).order("company_name");
       setAccounts((data ?? []) as any);
     })();
   }, [open, orgId, initialAccountId]);
@@ -49,6 +51,12 @@ export function CreateOrderModal({ open, onClose, onSuccess, initialAccountId }:
 
   useEffect(() => {
     if (selected?.is_non_cannabis) setIsNonCannabis(true);
+    // Prefill delivery notes from the account's default, but only if the user
+    // hasn't typed anything yet.
+    if (selected?.default_delivery_notes && !deliveryNotes) {
+      setDeliveryNotes(selected.default_delivery_notes);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
 
   const valid = !!accountId;
@@ -62,7 +70,8 @@ export function CreateOrderModal({ open, onClose, onSuccess, initialAccountId }:
         account_id: accountId, sale_type: saleType,
         is_trade_sample: isTradeSample, is_non_cannabis: isNonCannabis,
         notes: notes.trim() || null,
-      });
+        delivery_notes: deliveryNotes.trim() || null,
+      } as any);
       toast.success(`Order ${order.order_number} created`);
       onSuccess?.(order);
       onClose();
@@ -116,6 +125,10 @@ export function CreateOrderModal({ open, onClose, onSuccess, initialAccountId }:
         </div>
         <Field label="Notes">
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
+        </Field>
+        <Field label="Delivery notes">
+          <textarea value={deliveryNotes} onChange={(e) => setDeliveryNotes(e.target.value)} rows={3} placeholder="Special delivery instructions (parking, loading, contact)" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
+          {selected?.default_delivery_notes && <p className="text-[10px] text-muted-foreground mt-1">Pre-filled from account default — edit freely.</p>}
         </Field>
       </div>
     </ScrollableModal>

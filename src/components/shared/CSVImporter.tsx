@@ -13,17 +13,33 @@ export interface ImporterColumn {
   hint?: string;
 }
 
+export type DryRunStatus = "create" | "update" | "skip" | "error";
+
+export interface DryRunResult {
+  status: DryRunStatus;
+  /** When status="update", the fields that differ from the existing record */
+  diffs?: Record<string, { old: any; new: any }>;
+  /** Human-readable reason (e.g. why this row would be skipped / error) */
+  reason?: string;
+}
+
 export interface ImporterProps {
   entityKey: keyof typeof CCRS_FIELD_MAP | string;
   columns: ImporterColumn[];
   /** Function to import a single mapped row. Should return { success, error? }. */
   onImport: (row: Record<string, any>) => Promise<{ success: boolean; error?: string }>;
+  /**
+   * Optional dry-run classifier. If provided, the preview step calls this
+   * for each row to decide CREATE / UPDATE / SKIP / ERROR. SKIP rows are
+   * not imported; CREATE + UPDATE rows are.
+   */
+  dryRun?: (row: Record<string, any>) => Promise<DryRunResult> | DryRunResult;
   onDone?: (stats: { imported: number; failed: number }) => void;
 }
 
 type Step = "upload" | "map" | "preview" | "import" | "done";
 
-export default function CSVImporter({ entityKey, columns, onImport, onDone }: ImporterProps) {
+export default function CSVImporter({ entityKey, columns, onImport, dryRun, onDone }: ImporterProps) {
   const [step, setStep] = useState<Step>("upload");
   const [rawColumns, setRawColumns] = useState<string[]>([]);
   const [rawRows, setRawRows] = useState<Record<string, string>[]>([]);
@@ -31,6 +47,8 @@ export default function CSVImporter({ entityKey, columns, onImport, onDone }: Im
   const [isCCRS, setIsCCRS] = useState(false);
   const [progress, setProgress] = useState({ done: 0, failed: 0, total: 0 });
   const [failures, setFailures] = useState<Array<{ row: Record<string, any>; error: string }>>([]);
+  const [dryRunResults, setDryRunResults] = useState<DryRunResult[]>([]);
+  const [dryRunning, setDryRunning] = useState(false);
 
   const handleFile = async (file: File) => {
     const text = await file.text();
@@ -84,12 +102,24 @@ export default function CSVImporter({ entityKey, columns, onImport, onDone }: Im
     setProgress({ done: 0, failed: 0, total: mappedRows.length });
     const newFailures: Array<{ row: Record<string, any>; error: string }> = [];
     let done = 0, failed = 0;
-    for (const row of mappedRows) {
+    for (let i = 0; i < mappedRows.length; i++) {
+      const row = mappedRows[i];
       // Skip rows with missing required fields
       const missing = columns.filter((c) => c.required && !row[c.field]);
       if (missing.length > 0) {
         failed++;
         newFailures.push({ row, error: `Missing: ${missing.map((c) => c.field).join(", ")}` });
+        setProgress({ done, failed, total: mappedRows.length });
+        continue;
+      }
+      // Honor dry-run classification: skip SKIP rows entirely
+      if (dryRunResults[i] && dryRunResults[i].status === "skip") {
+        setProgress({ done, failed, total: mappedRows.length });
+        continue;
+      }
+      if (dryRunResults[i] && dryRunResults[i].status === "error") {
+        failed++;
+        newFailures.push({ row, error: dryRunResults[i].reason ?? "Flagged by dry-run" });
         setProgress({ done, failed, total: mappedRows.length });
         continue;
       }
@@ -105,6 +135,24 @@ export default function CSVImporter({ entityKey, columns, onImport, onDone }: Im
     setFailures(newFailures);
     setStep("done");
     onDone?.({ imported: done, failed });
+  };
+
+  // Run the classifier in parallel-ish for every mapped row when preview opens.
+  const runDryRun = async () => {
+    if (!dryRun) return;
+    setDryRunning(true);
+    try {
+      const results: DryRunResult[] = [];
+      for (const row of mappedRows) {
+        try {
+          const r = await Promise.resolve(dryRun(row));
+          results.push(r);
+        } catch (err: any) {
+          results.push({ status: "error", reason: err?.message ?? "Classifier failed" });
+        }
+      }
+      setDryRunResults(results);
+    } finally { setDryRunning(false); }
   };
 
   const downloadFailures = () => {
@@ -173,25 +221,71 @@ export default function CSVImporter({ entityKey, columns, onImport, onDone }: Im
             </tbody>
           </table>
         </div>
-        <Button onClick={() => setStep("preview")} className="gap-1.5"><ArrowRight className="w-3.5 h-3.5" /> Preview</Button>
+        <Button onClick={async () => { setStep("preview"); if (dryRun) await runDryRun(); }} className="gap-1.5"><ArrowRight className="w-3.5 h-3.5" /> Preview</Button>
       </div>
     );
   }
 
   if (step === "preview") {
     const preview = mappedRows.slice(0, 10);
+    // Summary of all rows (not just preview)
+    const counts = { create: 0, update: 0, skip: 0, error: 0 };
+    mappedRows.forEach((_, idx) => {
+      const hasMissing = validation.errors.find((e) => e.rowIdx === idx);
+      if (hasMissing) { counts.error++; return; }
+      const dr = dryRunResults[idx];
+      if (dr) counts[dr.status]++;
+      else counts.create++; // default when no classifier
+    });
+    const toImport = counts.create + counts.update;
+
+    const badge = (status: DryRunStatus) => {
+      const base = "inline-flex items-center h-5 px-2 rounded-full text-[10px] font-semibold uppercase tracking-wider";
+      if (status === "create") return <span className={cn(base, "bg-emerald-500/15 text-emerald-500")}>Create</span>;
+      if (status === "update") return <span className={cn(base, "bg-amber-500/15 text-amber-500")}>Update</span>;
+      if (status === "skip")   return <span className={cn(base, "bg-muted text-muted-foreground")}>Skip</span>;
+      return <span className={cn(base, "bg-destructive/15 text-destructive")}>Error</span>;
+    };
+
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-[14px] font-semibold">Preview first 10 rows</div>
-            <div className="text-[11px] text-muted-foreground">{validRowCount} valid · {validation.errors.length} with errors</div>
+            <div className="text-[11px] text-muted-foreground">
+              {dryRunning
+                ? "Classifying rows…"
+                : `${mappedRows.length} row${mappedRows.length === 1 ? "" : "s"} — ${toImport} will be imported`}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="ghost" onClick={() => setStep("map")}>Back</Button>
-            <Button size="sm" onClick={runImport} disabled={validRowCount === 0} className="gap-1.5">Import {validRowCount} Row{validRowCount === 1 ? "" : "s"}</Button>
+            <Button size="sm" onClick={runImport} disabled={toImport === 0 || dryRunning} className="gap-1.5">
+              Import {toImport} Row{toImport === 1 ? "" : "s"}
+            </Button>
           </div>
         </div>
+
+        {/* Summary bar */}
+        <div className="grid grid-cols-4 gap-2 text-[11px]">
+          <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2">
+            <div className="text-emerald-500 font-semibold uppercase tracking-wider text-[9px]">Create</div>
+            <div className="font-mono text-[16px] font-bold">{counts.create}</div>
+          </div>
+          <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2">
+            <div className="text-amber-500 font-semibold uppercase tracking-wider text-[9px]">Update</div>
+            <div className="font-mono text-[16px] font-bold">{counts.update}</div>
+          </div>
+          <div className="rounded-lg bg-muted/50 border border-border px-3 py-2">
+            <div className="text-muted-foreground font-semibold uppercase tracking-wider text-[9px]">Skip</div>
+            <div className="font-mono text-[16px] font-bold">{counts.skip}</div>
+          </div>
+          <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2">
+            <div className="text-destructive font-semibold uppercase tracking-wider text-[9px]">Error</div>
+            <div className="font-mono text-[16px] font-bold">{counts.error}</div>
+          </div>
+        </div>
+
         {validation.errors.length > 0 && (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 flex items-start gap-2 text-[12px]">
             <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5" />
@@ -203,17 +297,43 @@ export default function CSVImporter({ entityKey, columns, onImport, onDone }: Im
             <table className="w-full text-[11px] min-w-[640px]">
               <thead className="bg-muted/40">
                 <tr>
-                  <th className="px-3 py-2 w-8" />
+                  <th className="text-left px-3 py-2 w-24">Status</th>
                   {columns.map((c) => <th key={c.field} className="text-left px-3 py-2 font-mono">{c.field}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {preview.map((row, idx) => {
                   const hasError = validation.errors.find((e) => e.rowIdx === idx);
+                  const dr = hasError
+                    ? { status: "error" as DryRunStatus, reason: `Missing: ${hasError.missing.join(", ")}` }
+                    : dryRunResults[idx] ?? { status: "create" as DryRunStatus };
                   return (
-                    <tr key={idx} className={cn("border-t border-border/50", hasError && "bg-destructive/5")}>
-                      <td className="px-3 py-2">{hasError ? <X className="w-3 h-3 text-destructive" /> : <Check className="w-3 h-3 text-emerald-500" />}</td>
-                      {columns.map((c) => <td key={c.field} className="px-3 py-2 font-mono truncate max-w-[180px]">{row[c.field] ?? <span className={cn("text-muted-foreground", c.required && !row[c.field] && "text-destructive")}>—</span>}</td>)}
+                    <tr key={idx} className={cn(
+                      "border-t border-border/50 align-top",
+                      dr.status === "error" && "bg-destructive/5",
+                      dr.status === "update" && "bg-amber-500/5",
+                      dr.status === "skip" && "opacity-60",
+                    )}>
+                      <td className="px-3 py-2">
+                        {badge(dr.status)}
+                        {dr.reason && <div className="text-[10px] text-muted-foreground mt-1 max-w-[120px]">{dr.reason}</div>}
+                      </td>
+                      {columns.map((c) => {
+                        const val = row[c.field];
+                        const diff = dr.diffs?.[c.field];
+                        return (
+                          <td key={c.field} className="px-3 py-2 font-mono truncate max-w-[180px]">
+                            {diff ? (
+                              <div>
+                                <div className="text-rose-500 line-through text-[10px] truncate">{String(diff.old ?? "—")}</div>
+                                <div className="text-emerald-500 truncate">{String(diff.new ?? "—")}</div>
+                              </div>
+                            ) : val ? val : (
+                              <span className={cn("text-muted-foreground", c.required && "text-destructive")}>—</span>
+                            )}
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })}

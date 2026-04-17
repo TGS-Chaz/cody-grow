@@ -241,6 +241,7 @@ export interface CreateOrderInput {
   is_trade_sample?: boolean;
   is_non_cannabis?: boolean;
   notes?: string | null;
+  delivery_notes?: string | null;
   sale_external_identifier?: string | null;
 }
 
@@ -262,6 +263,7 @@ export function useCreateOrder() {
       is_non_cannabis: input.is_non_cannabis ?? false,
       sale_external_identifier: input.sale_external_identifier ?? generateExternalId(),
       notes: input.notes ?? null,
+      delivery_notes: input.delivery_notes ?? null,
       subtotal: 0,
       total: 0,
       created_by: user?.id ?? null,

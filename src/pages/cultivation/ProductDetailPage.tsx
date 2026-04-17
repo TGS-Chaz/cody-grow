@@ -17,6 +17,7 @@ import StatCard from "@/components/shared/StatCard";
 import StatusPill from "@/components/shared/StatusPill";
 import MarketPricingCard from "@/components/ai/MarketPricingCard";
 import { useMarketPrice } from "@/hooks/usePricingIntel";
+import InlineAIEdit from "@/components/ai/InlineAIEdit";
 import DataTable from "@/components/shared/DataTable";
 import CopyableId from "@/components/shared/CopyableId";
 import DateTime from "@/components/shared/DateTime";
@@ -51,6 +52,7 @@ export default function ProductDetailPage() {
   const { data: product, loading, refresh } = useProduct(id);
   const { updateProduct, archiveProduct, duplicateProduct } = useProducts();
   const [editOpen, setEditOpen] = useState(false);
+  const [aiEditOpen, setAiEditOpen] = useState(false);
 
   const { setContext, clearContext } = useCodyContext();
   const sig = product ? `${product.id}:${product.updated_at}` : "";
@@ -151,6 +153,9 @@ export default function ProductDetailPage() {
             <Button variant="outline" onClick={() => setEditOpen(true)} className="gap-1.5">
               <Edit className="w-3.5 h-3.5" /> Edit
             </Button>
+            <Button variant="outline" onClick={() => setAiEditOpen(true)} className="gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-primary" /> Edit with Cody
+            </Button>
             <Button variant="outline" onClick={handleDuplicate} className="gap-1.5">
               <Copy className="w-3.5 h-3.5" /> Duplicate
             </Button>
@@ -235,6 +240,16 @@ export default function ProductDetailPage() {
       </Tabs>
 
       <ProductFormModal open={editOpen} onClose={() => setEditOpen(false)} editing={product} onSave={handleSave} />
+      <InlineAIEdit
+        open={aiEditOpen}
+        onClose={() => setAiEditOpen(false)}
+        entityType="product"
+        entity={product as unknown as Record<string, unknown>}
+        editableFields={["name", "description", "sku", "unit_price", "cost_per_unit", "unit_weight_grams", "warning_text", "image_url", "is_active"]}
+        onApply={async (_m, patch) => {
+          await handleSave({ ...(product as any), ...patch });
+        }}
+      />
     </div>
   );
 }

@@ -227,6 +227,16 @@ export function AccountModal({ open, onClose, onSuccess, account }: {
                   </div>
                 </Field>
                 <Field label="Delivery window"><Input value={(form as any).preferred_delivery_window ?? ""} onChange={(e) => setField("preferred_delivery_window" as any, e.target.value as any)} placeholder="e.g. 9am-2pm" /></Field>
+                <Field label="Default delivery notes">
+                  <textarea
+                    value={(form as any).default_delivery_notes ?? ""}
+                    onChange={(e) => setField("default_delivery_notes" as any, e.target.value as any)}
+                    rows={3}
+                    placeholder="e.g. Ring bell at receiving dock. Ask for Chris. Park in loading zone C."
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">Auto-applied to new orders and manifests for this account.</p>
+                </Field>
               </Section>
 
               <Section title="Menu push">

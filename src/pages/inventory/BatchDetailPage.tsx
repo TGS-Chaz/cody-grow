@@ -25,7 +25,7 @@ import { useShortcut } from "@/components/shared/KeyboardShortcuts";
 import { useCodyContext } from "@/hooks/useCodyContext";
 import {
   useBatch, useBatchQAResults, useBatchOrderHistory, useBatchAdjustments, useBatchChildren,
-  useMakeBatchAvailable, Batch,
+  useMakeBatchAvailable, useUpdateBatch, Batch,
 } from "@/hooks/useBatches";
 import { CCRS_INVENTORY_CATEGORY_LABELS, CCRS_INVENTORY_CATEGORY_COLORS, CcrsInventoryCategory, STRAIN_TYPE_COLORS, StrainType } from "@/lib/schema-enums";
 import { SublotModal, AdjustInventoryModal, ReturnToParentModal } from "./BatchModals";
@@ -33,6 +33,7 @@ import { AddResultsModal } from "./QAModals";
 import COAExtractor, { COAExtraction } from "@/components/ai/COAExtractor";
 import MarketPricingCard from "@/components/ai/MarketPricingCard";
 import { useMarketPrice } from "@/hooks/usePricingIntel";
+import InlineAIEdit from "@/components/ai/InlineAIEdit";
 import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +65,8 @@ export default function BatchDetailPage() {
   const makeAvailable = useMakeBatchAvailable();
 
   const [modal, setModal] = useState<ModalKey>(null);
+  const [aiEditOpen, setAiEditOpen] = useState(false);
+  const updateBatch = useUpdateBatch();
   const [returnChild, setReturnChild] = useState<Batch | null>(null);
 
   const { setContext, clearContext } = useCodyContext();
@@ -174,6 +177,9 @@ export default function BatchDetailPage() {
             </Button>
             <Button variant="outline" onClick={() => setModal("adjust")} className="gap-1.5">
               <Sliders className="w-3.5 h-3.5" /> Adjust
+            </Button>
+            <Button variant="outline" onClick={() => setAiEditOpen(true)} className="gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-primary" /> Edit with Cody
             </Button>
 
             <DropdownMenu>
@@ -347,6 +353,17 @@ export default function BatchDetailPage() {
         onClose={() => setReturnChild(null)}
         child={returnChild}
         onSuccess={() => { refresh(); refreshChildren(); }}
+      />
+      <InlineAIEdit
+        open={aiEditOpen}
+        onClose={() => setAiEditOpen(false)}
+        entityType="batch"
+        entity={batch as unknown as Record<string, unknown>}
+        editableFields={[
+          "notes", "unit_cost", "procurement_farm", "procurement_license",
+          "expiration_date", "packaged_date", "is_available", "image_url", "marketplace_group_id",
+        ]}
+        onApply={async (_m, patch) => { await updateBatch(batch.id, patch as any); refresh(); }}
       />
     </div>
   );

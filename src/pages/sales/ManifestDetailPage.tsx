@@ -298,6 +298,7 @@ export default function ManifestDetailPage() {
         </TabsList>
 
         <TabsContent value="overview">
+          <ManifestDeliveryNotes orderId={manifest.order_id ?? null} />
           <DocumentPreview manifest={manifest} items={items} totalQty={totalQty} totalValue={totalValue} />
         </TabsContent>
         <TabsContent value="items">
@@ -526,6 +527,27 @@ function WCIAPanel({ manifest, json, onSave }: { manifest: Manifest; json: any; 
       <div className="rounded-xl border border-border bg-card p-4 text-[12px] text-muted-foreground">
         Share this JSON with the receiving party so they can import the transfer data into their system without re-keying.
       </div>
+    </div>
+  );
+}
+
+function ManifestDeliveryNotes({ orderId }: { orderId: string | null }) {
+  const [notes, setNotes] = useState<string | null>(null);
+  useEffect(() => {
+    if (!orderId) { setNotes(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { supabase } = await import("@/lib/supabase");
+      const { data } = await supabase.from("grow_orders").select("delivery_notes").eq("id", orderId).maybeSingle();
+      if (!cancelled) setNotes((data as any)?.delivery_notes ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [orderId]);
+  if (!notes) return null;
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 mb-4">
+      <div className="text-[11px] uppercase tracking-wider font-semibold text-amber-500 mb-1.5">Delivery notes</div>
+      <div className="text-[13px] whitespace-pre-wrap">{notes}</div>
     </div>
   );
 }

@@ -124,7 +124,8 @@ export function useProducts() {
         supabase.from("grow_products").select("*").eq("org_id", orgId).order("sort_order", { ascending: true }).order("name"),
         supabase.from("grow_product_lines").select("id, name").eq("org_id", orgId),
         supabase.from("grow_strains").select("id, name, type").eq("org_id", orgId),
-        supabase.from("grow_batches").select("product_id, status").eq("org_id", orgId).not("status", "in", "(destroyed,voided)"),
+        // grow_batches has no `status` column — "active" means current_quantity > 0
+        supabase.from("grow_batches").select("product_id, current_quantity").eq("org_id", orgId).gt("current_quantity", 0),
       ]);
       if (cancelled) return;
       if (prodRes.error) { setError(prodRes.error.message); setLoading(false); return; }
@@ -252,7 +253,7 @@ export function useProduct(id: string | undefined) {
       const [lineRes, strainRes, batchRes] = await Promise.all([
         row.product_line_id ? supabase.from("grow_product_lines").select("id, name").eq("id", row.product_line_id).maybeSingle() : Promise.resolve({ data: null }),
         row.strain_id ? supabase.from("grow_strains").select("id, name, type").eq("id", row.strain_id).maybeSingle() : Promise.resolve({ data: null }),
-        supabase.from("grow_batches").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("product_id", id).not("status", "in", "(destroyed,voided)"),
+        supabase.from("grow_batches").select("id", { count: "exact", head: true }).eq("org_id", orgId).eq("product_id", id).gt("current_quantity", 0),
       ]);
       if (cancelled) return;
 

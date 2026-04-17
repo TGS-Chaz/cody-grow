@@ -399,6 +399,7 @@ export function CreateBatchModal({ open, onClose, onSuccess }: CreateBatchModalP
   const [strains, setStrains] = useState<Array<{ id: string; name: string }>>([]);
   const [areas, setAreas] = useState<Array<{ id: string; name: string }>>([]);
   const [harvests, setHarvests] = useState<Array<{ id: string; name: string }>>([]);
+  const [vendorAccounts, setVendorAccounts] = useState<Array<{ id: string; company_name: string; license_number: string | null }>>([]);
 
   useEffect(() => {
     if (!open || !orgId) return;
@@ -409,16 +410,18 @@ export function CreateBatchModal({ open, onClose, onSuccess }: CreateBatchModalP
     setExternalId(generateExternalId()); setExpirationDate(""); setPackagedDate("");
     setNotes(""); setImageUrl(""); setShowAdvanced(false);
     (async () => {
-      const [pRes, sRes, aRes, hRes] = await Promise.all([
+      const [pRes, sRes, aRes, hRes, vRes] = await Promise.all([
         supabase.from("grow_products").select("id, name, category, ccrs_inventory_category, strain_id, sku").eq("org_id", orgId).eq("is_active", true).order("name"),
         supabase.from("grow_strains").select("id, name").eq("org_id", orgId).order("name"),
         supabase.from("grow_areas").select("id, name").eq("org_id", orgId).eq("is_active", true).order("name"),
         supabase.from("grow_harvests").select("id, name").eq("org_id", orgId).eq("status", "cured").order("created_at", { ascending: false }),
+        supabase.from("grow_accounts").select("id, company_name, license_number").eq("org_id", orgId).eq("is_active", true).in("license_type", ["producer", "processor", "producer_processor"]).order("company_name"),
       ]);
       setProducts((pRes.data ?? []) as any);
       setStrains((sRes.data ?? []) as any);
       setAreas((aRes.data ?? []) as any);
       setHarvests((hRes.data ?? []) as any);
+      setVendorAccounts((vRes.data ?? []) as any);
     })();
   }, [open, orgId]);
 
@@ -598,8 +601,26 @@ export function CreateBatchModal({ open, onClose, onSuccess }: CreateBatchModalP
                   </Field>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Procurement farm"><Input value={procurementFarm} onChange={(e) => setProcurementFarm(e.target.value)} /></Field>
-                  <Field label="Procurement license"><Input value={procurementLicense} onChange={(e) => setProcurementLicense(e.target.value)} /></Field>
+                  <Field label="Procurement farm" helper="Pick a supplier account to auto-fill the license #">
+                    <div className="space-y-1.5">
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const acct = vendorAccounts.find((a) => a.id === e.target.value);
+                          if (!acct) return;
+                          setProcurementFarm(acct.company_name);
+                          if (acct.license_number) setProcurementLicense(acct.license_number);
+                        }}
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-ring"
+                        disabled={vendorAccounts.length === 0}
+                      >
+                        <option value="">— Pick supplier account —</option>
+                        {vendorAccounts.map((v) => <option key={v.id} value={v.id}>{v.company_name}{v.license_number ? ` · ${v.license_number}` : ""}</option>)}
+                      </select>
+                      <Input value={procurementFarm} onChange={(e) => setProcurementFarm(e.target.value)} placeholder="Or type farm name" />
+                    </div>
+                  </Field>
+                  <Field label="Procurement license"><Input value={procurementLicense} onChange={(e) => setProcurementLicense(e.target.value)} className="font-mono" /></Field>
                 </div>
               </Section>
 

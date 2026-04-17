@@ -97,6 +97,7 @@ const navGroups: NavGroup[] = [
     { to: "/compliance/recalls", icon: AlertOctagon, label: "Recalls", required: ["view_recalls"] },
     { to: "/compliance/disposals", icon: Trash2, label: "Disposals", required: ["view_disposals"] },
     { to: "/compliance/labels", icon: Tag, label: "Labels", required: ["view_labels"] },
+    { to: "/compliance/documents", icon: FileText, label: "Documents" },
   ]},
   { label: "Settings", required: ["manage_settings", "manage_users", "manage_employees", "manage_facilities", "manage_equipment", "manage_fleet", "manage_integrations"], items: [
     { to: "/settings", icon: Settings, label: "Configuration" },

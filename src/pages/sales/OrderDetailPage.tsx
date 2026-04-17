@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ShoppingCart, Loader2, Send, Package, Truck, CheckCircle2, XCircle, Activity, MoreHorizontal,
-  Plus, Trash2, Building2, DollarSign, FileText, Edit, ArrowRight, Printer, Receipt, MessageSquare,
+  Plus, Trash2, Building2, DollarSign, FileText, Edit, ArrowRight, Printer, Receipt, MessageSquare, AlertTriangle,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -358,6 +358,7 @@ function ItemsPanel({ items, order, loading, onAdd, onRemove, canEdit, fullyAllo
 
   return (
     <div className="space-y-3">
+      <MinimumOrderWarning order={order} />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h3 className="text-[13px] font-semibold">Line items</h3>
@@ -543,6 +544,42 @@ function Stat({ label, value, className }: { label: string; value: React.ReactNo
 }
 
 void Edit;
+
+function MinimumOrderWarning({ order }: { order: Order }) {
+  const [minimum, setMinimum] = useState<number | null>(null);
+  const [routeName, setRouteName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!order.account_id) { setMinimum(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data: acct } = await supabase.from("grow_accounts").select("route_id").eq("id", order.account_id).maybeSingle();
+      const routeId = (acct as any)?.route_id;
+      if (!routeId) { if (!cancelled) setMinimum(null); return; }
+      const { data: route } = await supabase.from("grow_routes").select("name, minimum_order_amount").eq("id", routeId).maybeSingle();
+      if (cancelled) return;
+      const min = Number((route as any)?.minimum_order_amount ?? 0);
+      setMinimum(min > 0 ? min : null);
+      setRouteName((route as any)?.name ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [order.account_id]);
+  if (!minimum) return null;
+  const total = Number(order.total ?? 0);
+  const short = minimum - total;
+  if (short <= 0) return null;
+  return (
+    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 flex items-start gap-3 text-[12px]">
+      <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+      <div className="flex-1">
+        <div className="font-semibold text-amber-500">Order below route minimum</div>
+        <div className="text-foreground mt-0.5">
+          Route <span className="font-medium">{routeName ?? ""}</span> requires ${minimum.toFixed(2)}.
+          This order is ${total.toFixed(2)} — <span className="font-semibold">${short.toFixed(2)} short</span>. You can still submit.
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function InvoicePanel({ orderId, canGenerate }: { orderId: string; canGenerate: boolean }) {
   const [tick, setTick] = useState(0);

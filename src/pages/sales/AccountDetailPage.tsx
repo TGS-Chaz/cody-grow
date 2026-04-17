@@ -19,8 +19,10 @@ import { useShortcut } from "@/components/shared/KeyboardShortcuts";
 import { useCodyContext } from "@/hooks/useCodyContext";
 import {
   useAccount, useArchiveAccount, useAccountOrders, useAccountNotes, useCreateNote, usePinNote, useDeleteNote,
-  useAccountPriceLists, useAccountDrivers, useAccountVehicles, Account,
+  useAccountPriceLists, useAccountDrivers, useAccountVehicles, Account, useUpdateAccount,
 } from "@/hooks/useAccounts";
+import InlineAIEdit from "@/components/ai/InlineAIEdit";
+import { Sparkles } from "lucide-react";
 import { useNoteAttributes } from "@/hooks/useNoteAttributes";
 import { AccountModal } from "./AccountModal";
 import AccountCreditPanel from "./AccountCreditPanel";
@@ -52,6 +54,8 @@ export default function AccountDetailPage() {
   const deleteNote = useDeleteNote();
 
   const [editOpen, setEditOpen] = useState(false);
+  const [aiEditOpen, setAiEditOpen] = useState(false);
+  const updateAccount = useUpdateAccount();
 
   const { setContext, clearContext } = useCodyContext();
   const payload = useMemo(() => {
@@ -111,6 +115,9 @@ export default function AccountDetailPage() {
             </Button>
             <Button variant="outline" onClick={() => setEditOpen(true)} className="gap-1.5">
               <Edit className="w-3.5 h-3.5" /> Edit
+            </Button>
+            <Button variant="outline" onClick={() => setAiEditOpen(true)} className="gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-primary" /> Edit with Cody
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="w-9 h-9"><MoreHorizontal className="w-4 h-4" /></Button></DropdownMenuTrigger>
@@ -193,6 +200,22 @@ export default function AccountDetailPage() {
       </Tabs>
 
       <AccountModal open={editOpen} onClose={() => setEditOpen(false)} account={account} onSuccess={() => refresh()} />
+      <InlineAIEdit
+        open={aiEditOpen}
+        onClose={() => setAiEditOpen(false)}
+        entityType="account"
+        entity={account as unknown as Record<string, unknown>}
+        editableFields={[
+          "company_name", "primary_contact_name", "primary_contact_email", "primary_contact_phone",
+          "street_address", "city", "state", "postal_code",
+          "payment_terms", "credit_limit_cents", "default_delivery_notes",
+          "preferred_delivery_window",
+        ]}
+        onApply={async (_merged, patch) => {
+          await updateAccount(account.id, patch as any);
+          refresh();
+        }}
+      />
     </div>
   );
 }

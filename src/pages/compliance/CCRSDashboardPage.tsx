@@ -21,6 +21,7 @@ import { CCRSCategory, CCRS_CATEGORY_LABELS } from "@/lib/ccrs/generators";
 import { supabase } from "@/lib/supabase";
 import { useOrg } from "@/lib/org";
 import { cn } from "@/lib/utils";
+import CCRSDiffViewer from "@/components/ai/CCRSDiffViewer";
 
 const CATEGORY_ICONS: Record<CCRSCategory, any> = {
   strain: Dna, area: MapPin, product: Package, plant: Leaf,
@@ -46,6 +47,7 @@ export default function CCRSDashboardPage() {
 
   const [generating, setGenerating] = useState<CCRSCategory | null>(null);
   const [previewCSV, setPreviewCSV] = useState<GeneratedCSV | null>(null);
+  const [diffRow, setDiffRow] = useState<any | null>(null);
 
   const [integratorStatus, setIntegratorStatus] = useState<string>("not_applied");
   const [integratorId, setIntegratorId] = useState<string | null>(null);
@@ -163,11 +165,20 @@ export default function CCRSDashboardPage() {
     { accessorKey: "uploaded_at", header: "Uploaded", cell: ({ row }) => row.original.uploaded_at ? <DateTime value={row.original.uploaded_at} className="text-[12px]" /> : <span className="text-muted-foreground">—</span> },
     {
       id: "actions", enableSorting: false, header: "",
-      cell: ({ row }) => (
-        row.original.status === "queued_manual" || (row.original.status === "uploaded" && !row.original.accepted_at)
-          ? <Button size="sm" variant="outline" onClick={() => handleConfirmUpload(row.original.id)} className="h-7 px-2 text-[11px] gap-1"><CheckCircle2 className="w-3 h-3" /> Confirm Upload</Button>
-          : null
-      ),
+      cell: ({ row }) => {
+        const rejected = row.original.status === "rejected" || row.original.status === "rejected_partial";
+        if (rejected && (row.original.ccrs_error_details || row.original.errors_count > 0)) {
+          return (
+            <Button size="sm" variant="outline" onClick={() => setDiffRow(row.original)} className="h-7 px-2 text-[11px] gap-1 text-destructive border-destructive/40">
+              <AlertTriangle className="w-3 h-3" /> View Errors
+            </Button>
+          );
+        }
+        if (row.original.status === "queued_manual" || (row.original.status === "uploaded" && !row.original.accepted_at)) {
+          return <Button size="sm" variant="outline" onClick={() => handleConfirmUpload(row.original.id)} className="h-7 px-2 text-[11px] gap-1"><CheckCircle2 className="w-3 h-3" /> Confirm Upload</Button>;
+        }
+        return null;
+      },
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [orgId]);
@@ -254,6 +265,17 @@ export default function CCRSDashboardPage() {
           description: "Generate a CSV for any category and mark it uploaded to see history here.",
         }}
       />
+
+      {/* CCRS diff viewer for rejected submissions */}
+      {diffRow && (
+        <CCRSDiffViewer
+          open={!!diffRow}
+          onClose={() => setDiffRow(null)}
+          submittedRecord={(diffRow.submitted_record as any) ?? { file_name: diffRow.file_name, file_category: diffRow.file_category, license_number: diffRow.license_number, number_records: diffRow.number_records }}
+          errorDetails={diffRow.ccrs_error_details ?? `CCRS rejected this submission (${diffRow.errors_count ?? 0} errors). Full error payload was not stored — check your WSLCB portal for details.`}
+          submissionStatus={diffRow.status}
+        />
+      )}
 
       {/* Preview modal */}
       {previewCSV && (

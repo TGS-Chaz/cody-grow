@@ -39,6 +39,7 @@ import {
   HARVEST_STATUS_LABELS, HarvestStatus,
 } from "@/lib/schema-enums";
 import CycleFormModal from "./CycleFormModal";
+import InlineAIEdit from "@/components/ai/InlineAIEdit";
 import HarvestModal from "@/components/board/HarvestModal";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +72,7 @@ export default function CycleDetailPage() {
   const yieldMetrics = useCycleYield(cycle, harvests);
 
   const [editOpen, setEditOpen] = useState(false);
+  const [aiEditOpen, setAiEditOpen] = useState(false);
   const [harvestOpen, setHarvestOpen] = useState(false);
   const [phasePickerOpen, setPhasePickerOpen] = useState(false);
 
@@ -215,6 +217,9 @@ export default function CycleDetailPage() {
             <Button variant="outline" onClick={() => setEditOpen(true)} className="gap-1.5" title="Edit (E)">
               <Edit className="w-3.5 h-3.5" /> Edit
             </Button>
+            <Button variant="outline" onClick={() => setAiEditOpen(true)} className="gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-primary" /> Edit with Cody
+            </Button>
             <Button variant="outline" onClick={handleArchive} className="gap-1.5 text-destructive border-destructive/40 hover:bg-destructive/10">
               <Archive className="w-3.5 h-3.5" /> Archive
             </Button>
@@ -321,6 +326,14 @@ export default function CycleDetailPage() {
         onClose={() => setEditOpen(false)}
         editing={cycle}
         onSave={async (input) => { const row = await updateCycle(cycle.id, input); refresh(); return row; }}
+      />
+      <InlineAIEdit
+        open={aiEditOpen}
+        onClose={() => setAiEditOpen(false)}
+        entityType="cycle"
+        entity={cycle as unknown as Record<string, unknown>}
+        editableFields={["name", "notes", "target_harvest_date", "phase"]}
+        onApply={async (_m, patch) => { await updateCycle(cycle.id, patch as any); refresh(); }}
       />
       {harvestOpen && boardCardProxy && (
         <HarvestModal

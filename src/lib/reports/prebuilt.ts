@@ -158,6 +158,31 @@ export const PREBUILT_REPORTS: PrebuiltReport[] = [
     filters_config: [{ field: "date_range", label: "Date range", type: "date_range" }],
   },
 
+  {
+    key: "procurement_by_farm",
+    name: "Procurement by Farm",
+    description: "Batches grouped by supplier farm — total weight and count.",
+    category: "inventory",
+    icon: "Building2",
+    query_config: {
+      data_source: "grow_batches",
+      group_by: "procurement_farm",
+      filters: [{ field: "procurement_farm", op: "neq", value: null }],
+      aggregates: [
+        { field: "initial_weight_grams", kind: "sum", alias: "total_weight_g" },
+        { field: "unit_cost", kind: "sum", alias: "total_cost" },
+      ],
+    },
+    columns_config: [
+      { field: "procurement_farm", label: "Farm" },
+      { field: "procurement_license", label: "License" },
+      { field: "count", label: "Batches", format: "number" },
+      { field: "total_weight_g", label: "Total weight", format: "weight" },
+      { field: "total_cost", label: "Total cost", format: "currency" },
+    ],
+    chart_config: { type: "bar", x_field: "procurement_farm", y_field: "total_weight_g" },
+  },
+
   // ─── Sales (2) ────────────────────────────────────────────────────────────
   {
     key: "top_customers",

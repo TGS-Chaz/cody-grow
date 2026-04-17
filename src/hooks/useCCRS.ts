@@ -48,6 +48,28 @@ const CATEGORY_TABLE: Record<CCRSCategory, string> = {
   manifest: "grow_manifests",
 };
 
+/**
+ * Column to diff against for "what changed since the last CCRS upload?".
+ * Most tables expose updated_at; immutable log tables (disposals, adjustments,
+ * qa_results) only have created_at. Falling back to created_at is safe because
+ * those rows never get updated after insert.
+ */
+const CATEGORY_CHANGE_COLUMN: Record<CCRSCategory, string> = {
+  strain: "updated_at",
+  area: "updated_at",
+  product: "updated_at",
+  plant: "updated_at",
+  plantdestruction: "created_at",
+  planttransfer: "updated_at",
+  inventory: "updated_at",
+  inventoryadjustment: "created_at",
+  inventorytransfer: "updated_at",
+  labtest: "created_at",
+  sale: "updated_at",
+  harvest: "updated_at",
+  manifest: "updated_at",
+};
+
 export function useCCRSStatus() {
   const { user } = useAuth();
   const { orgId } = useOrg();
@@ -75,9 +97,10 @@ export function useCCRSStatus() {
       for (const cat of CCRS_CATEGORIES) {
         const latest = latestByCategory.get(cat);
         const table = CATEGORY_TABLE[cat];
+        const changeCol = CATEGORY_CHANGE_COLUMN[cat];
         const since = latest?.uploaded_at ?? "1970-01-01";
         const { count } = await supabase.from(table).select("*", { count: "exact", head: true })
-          .eq("org_id", orgId).gt("updated_at", since);
+          .eq("org_id", orgId).gt(changeCol, since);
         const group = getGroupForKind(CATEGORY_TO_KIND[cat]);
         statuses.push({
           category: cat,

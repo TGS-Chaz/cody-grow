@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ClipboardList, Plus, MoreHorizontal, CheckCircle2, Edit, Trash2, LayoutGrid, List, Clock,
-  AlertCircle, Loader2,
+  AlertCircle, Loader2, BarChart3,
 } from "lucide-react";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { useTaskAnalytics } from "@/hooks/useTaskAnalytics";
 import { ColumnDef } from "@tanstack/react-table";
 import { DndContext, DragEndEvent, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from "@dnd-kit/core";
 import { toast } from "sonner";
@@ -51,7 +53,7 @@ export default function TasksPage() {
   const complete = useCompleteTask();
   const del = useDeleteTask();
 
-  const [view, setView] = useState<"kanban" | "list">("kanban");
+  const [view, setView] = useState<"kanban" | "list" | "analytics">("kanban");
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
@@ -158,6 +160,9 @@ export default function TasksPage() {
               <button onClick={() => setView("list")} className={cn("h-8 px-3 text-[12px] rounded-md flex items-center gap-1.5", view === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground")}>
                 <List className="w-3.5 h-3.5" /> List
               </button>
+              <button onClick={() => setView("analytics")} className={cn("h-8 px-3 text-[12px] rounded-md flex items-center gap-1.5", view === "analytics" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground")}>
+                <BarChart3 className="w-3.5 h-3.5" /> Analytics
+              </button>
             </div>
             <Button onClick={() => setCreateOpen(true)} className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Create Task</Button>
           </div>
@@ -208,8 +213,10 @@ export default function TasksPage() {
             })() : null}
           </DragOverlay>
         </DndContext>
-      ) : (
+      ) : view === "list" ? (
         <ListView tasks={filtered} onComplete={async (id) => { await complete(id); refresh(); }} onDelete={async (id) => { await del(id); refresh(); }} onEdit={setEditTask} />
+      ) : (
+        <AnalyticsView tasks={tasks} />
       )}
 
       <TaskModal open={createOpen || !!editTask} onClose={() => { setCreateOpen(false); setEditTask(null); }} task={editTask} onSuccess={() => refresh()} />
@@ -488,3 +495,111 @@ function Field({ label, required, children }: { label: string; required?: boolea
 }
 
 void EmptyState;
+
+// ─── Analytics ──────────────────────────────────────────────────────────────
+function AnalyticsView({ tasks }: { tasks: Task[] }) {
+  const analytics = useTaskAnalytics(tasks);
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <AnalyticsStat label="Total tasks" value={analytics.total.toString()} />
+        <AnalyticsStat label="Completed" value={analytics.completed.toString()} sub={`${Math.round(analytics.completionRate * 100)}% completion`} />
+        <AnalyticsStat label="Avg completion" value={analytics.avgCompletionHours != null ? `${analytics.avgCompletionHours.toFixed(1)}h` : "—"} />
+        <AnalyticsStat label="On-time rate" value={analytics.completed === 0 ? "—" : `${Math.round(analytics.onTimeRate * 100)}%`} sub="of completed" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h3 className="text-[13px] font-semibold mb-3">Completed by employee</h3>
+          {analytics.byEmployee.length === 0 ? (
+            <div className="py-12 text-center text-[12px] text-muted-foreground">No completed tasks yet.</div>
+          ) : (
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.byEmployee.slice(0, 10)} margin={{ top: 8, right: 8, left: 8, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <RTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", fontSize: 11 }} />
+                  <Bar dataKey="completed" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h3 className="text-[13px] font-semibold mb-3">Completion trend (30d)</h3>
+          <div className="h-[220px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={analytics.trend} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} interval={4} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <RTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", fontSize: 11 }} />
+                <Line type="monotone" dataKey="completed" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-5 py-3 border-b border-border">
+          <h3 className="text-[13px] font-semibold">Employee leaderboard</h3>
+        </div>
+        {analytics.byEmployee.length === 0 ? (
+          <div className="py-12 text-center text-[12px] text-muted-foreground">No data yet.</div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-muted/30 text-[10px] uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="text-left px-5 py-2 font-medium">Employee</th>
+                <th className="text-right px-3 py-2 font-medium">Completed</th>
+                <th className="text-right px-3 py-2 font-medium">On time</th>
+                <th className="text-right px-3 py-2 font-medium">Late</th>
+                <th className="text-right px-5 py-2 font-medium">Avg hours</th>
+              </tr>
+            </thead>
+            <tbody>
+              {analytics.byEmployee.map((e) => (
+                <tr key={e.user_id} className="border-t border-border text-[12px]">
+                  <td className="px-5 py-2.5 font-medium">{e.name}</td>
+                  <td className="px-3 py-2.5 text-right font-mono">{e.completed}</td>
+                  <td className="px-3 py-2.5 text-right font-mono text-emerald-500">{e.on_time}</td>
+                  <td className="px-3 py-2.5 text-right font-mono text-destructive">{e.late}</td>
+                  <td className="px-5 py-2.5 text-right font-mono">{e.avg_completion_hours != null ? `${e.avg_completion_hours.toFixed(1)}h` : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {analytics.byType.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h3 className="text-[13px] font-semibold mb-3">By task type</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {analytics.byType.map((t) => (
+              <div key={t.type} className="rounded-lg bg-muted/20 p-3">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t.type}</div>
+                <div className="text-[18px] font-bold font-mono">{t.completed}</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">avg {t.avg_completion_hours != null ? `${t.avg_completion_hours.toFixed(1)}h` : "—"}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AnalyticsStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{label}</div>
+      <div className="text-[22px] font-bold font-mono tabular-nums">{value}</div>
+      {sub && <div className="text-[10px] text-muted-foreground mt-1">{sub}</div>}
+    </div>
+  );
+}

@@ -32,9 +32,16 @@ interface AskCodyRequest {
   page_data?: unknown;
   user_message: string;
   conversation_id?: string;
-  intent?: "chat" | "extract_coa";
+  intent?: "chat" | "extract_coa" | "edit_entity" | "suggest_ccrs_fix";
   /** For intent=extract_coa — base64-encoded file content + mime type */
   attachment?: { base64: string; mime_type: "application/pdf" | "image/jpeg" | "image/png" | "image/webp"; filename?: string };
+  /** For intent=edit_entity — current record + plain-English instruction */
+  entity?: Record<string, unknown>;
+  entity_type?: string;
+  editable_fields?: string[];
+  instruction?: string;
+  /** For intent=suggest_ccrs_fix — submitted record + error details */
+  error_details?: unknown;
 }
 
 interface AnthropicMessage {
@@ -84,6 +91,44 @@ Rules:
 - confidence="high" if all major fields found, "medium" if most, "low" if the document is hard to read
 - Do not add any fields not listed above`;
 
+const EDIT_ENTITY_PROMPT = `You are Cody, performing a structured edit on a record in the Cody Grow seed-to-sale platform.
+
+You will receive:
+  ENTITY_TYPE — the record kind (account / product / plant / cycle / batch / etc.)
+  CURRENT — the current JSON of the record
+  EDITABLE_FIELDS — whitelist of fields you may change
+  INSTRUCTION — the user's plain-English request
+
+Return EXACTLY this JSON shape (no prose, no code fences):
+{
+  "patch": { <only the fields you're changing> },
+  "rationale": "<one short sentence explaining what you changed and why>",
+  "confidence": "high" | "medium" | "low"
+}
+
+Rules:
+- Only include fields present in EDITABLE_FIELDS.
+- Never guess a field value — if the instruction is ambiguous, return {"patch": {}, "rationale": "need clarification: ...", "confidence": "low"}.
+- For numeric fields, output numbers not strings.
+- For dates, use YYYY-MM-DD.
+- Do not invent new fields.`;
+
+const CCRS_FIX_PROMPT = `You are Cody, helping a cannabis producer fix a failed WSLCB CCRS submission.
+
+Input:
+  SUBMITTED — the record as it was sent to CCRS
+  ERROR — the error payload returned by CCRS
+
+Return exactly this JSON (no prose, no code fences):
+{
+  "root_cause": "<one sentence>",
+  "fix_instructions": ["<step 1>", "<step 2>", ...],
+  "fields_to_correct": ["<field name>", ...],
+  "suggested_values": { "<field>": "<value>" }
+}
+
+Be specific. Reference the exact column names from the submitted record. If the error suggests a missing reference (e.g. a strain external_id that CCRS doesn't recognize), point that out explicitly.`;
+
 async function callAnthropic(
   system: string,
   messages: AnthropicMessage[],
@@ -132,10 +177,11 @@ serve(async (req) => {
   try {
     // req.json() can only be called once per request
     const body: AskCodyRequest = await req.json();
-    const { product, context_type, context_id, page_data, user_message, intent, attachment } = body;
+    const { product, context_type, context_id, page_data, user_message, intent, attachment, entity, entity_type, editable_fields, instruction, error_details } = body;
     let conversation_id = body.conversation_id;
 
-    if (intent !== "extract_coa" && (!product || !user_message)) {
+    const structuredIntents = new Set(["extract_coa", "edit_entity", "suggest_ccrs_fix"]);
+    if (!structuredIntents.has(intent ?? "") && (!product || !user_message)) {
       return new Response(
         JSON.stringify({ error: "product and user_message are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -191,6 +237,56 @@ serve(async (req) => {
         });
       }
       return new Response(JSON.stringify({ extraction: parsed, tokens_used: tokens, model }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Inline AI edit — returns a structured JSON patch.
+    if (intent === "edit_entity") {
+      if (!entity || !instruction || !entity_type) {
+        return new Response(JSON.stringify({ error: "edit_entity requires entity, entity_type, and instruction" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const promptText = `ENTITY_TYPE: ${entity_type}\nCURRENT:\n${JSON.stringify(entity, null, 2)}\n\nEDITABLE_FIELDS: ${JSON.stringify(editable_fields ?? [])}\n\nINSTRUCTION: ${instruction}`;
+      const { content: jsonText, tokens, model } = await callAnthropic(EDIT_ENTITY_PROMPT, [
+        { role: "user", content: promptText },
+      ]);
+      let parsed: unknown = null;
+      try {
+        const cleaned = jsonText.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+        parsed = JSON.parse(cleaned);
+      } catch (_err) {
+        return new Response(JSON.stringify({ error: "Model did not return valid JSON", raw: jsonText }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ edit: parsed, tokens_used: tokens, model }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // CCRS fix suggestion — returns root cause + field-level fixes.
+    if (intent === "suggest_ccrs_fix") {
+      if (!entity || !error_details) {
+        return new Response(JSON.stringify({ error: "suggest_ccrs_fix requires entity and error_details" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const promptText = `SUBMITTED:\n${JSON.stringify(entity, null, 2)}\n\nERROR:\n${JSON.stringify(error_details, null, 2)}`;
+      const { content: jsonText, tokens, model } = await callAnthropic(CCRS_FIX_PROMPT, [
+        { role: "user", content: promptText },
+      ]);
+      let parsed: unknown = null;
+      try {
+        const cleaned = jsonText.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+        parsed = JSON.parse(cleaned);
+      } catch (_err) {
+        return new Response(JSON.stringify({ error: "Model did not return valid JSON", raw: jsonText }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ suggestion: parsed, tokens_used: tokens, model }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

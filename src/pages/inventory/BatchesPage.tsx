@@ -22,6 +22,7 @@ import CopyableId from "@/components/shared/CopyableId";
 import { useShortcut } from "@/components/shared/KeyboardShortcuts";
 import { useCodyContext } from "@/hooks/useCodyContext";
 import { useBatches, useBatchStats, useMakeBatchAvailable, Batch, BatchFilters } from "@/hooks/useBatches";
+import { useReorderAlerts } from "@/hooks/useReorderAlerts";
 import {
   CCRS_INVENTORY_CATEGORIES, CCRS_INVENTORY_CATEGORY_LABELS, CCRS_INVENTORY_CATEGORY_COLORS, CcrsInventoryCategory,
   STRAIN_TYPE_COLORS, StrainType,
@@ -54,6 +55,8 @@ export default function BatchesPage() {
   const filterSig = useMemo(() => Object.values(filters).map((v) => v ?? "").join(":"), [filters]);
   useEffect(() => { setPage(1); }, [filterSig]);
   const { data: batches, loading, refresh, totalCount } = useBatches(paginatedFilters);
+  // Scan for low-stock batches on page load (creates notifications once per batch)
+  useReorderAlerts();
   const stats = useBatchStats(batches);
   const makeAvailable = useMakeBatchAvailable();
   const { setContext, clearContext } = useCodyContext();

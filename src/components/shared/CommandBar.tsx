@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import codyIcon from "@/assets/cody-icon.svg";
 import { useGlobalSearch, ENTITY_LABELS, ENTITY_LIST_PATH, SearchEntity } from "@/hooks/useGlobalSearch";
+import { parseCommand } from "@/lib/commandParser";
 
 interface CommandItem {
   id: string;
@@ -56,8 +57,14 @@ export default function CommandBar() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
-  const { results, byEntity, counts, isSearching } = useGlobalSearch(query);
-  const hasResults = results.length > 0;
+  // Action mode: when the user types ">" as the first character the bar
+  // flips from search into a natural-language intent parser (create / view / ask).
+  const isActionMode = query.startsWith(">");
+  const parsedCommand = isActionMode ? parseCommand(query) : null;
+
+  const searchQuery = isActionMode ? "" : query;
+  const { results, byEntity, counts, isSearching } = useGlobalSearch(searchQuery);
+  const hasResults = !isActionMode && results.length > 0;
   const hasQuery = query.trim().length >= 2;
 
   // Global ⌘K / Ctrl+K listener
@@ -87,6 +94,20 @@ export default function CommandBar() {
     if (msg) {
       // Dispatch a follow-up event with the query so AskCody can pre-fill
       window.dispatchEvent(new CustomEvent("cody-prefill", { detail: msg }));
+    }
+  };
+
+  const runParsedCommand = () => {
+    if (!parsedCommand) return;
+    setOpen(false);
+    setQuery("");
+    if (parsedCommand.intent === "ai") {
+      window.dispatchEvent(new Event("open-cody-chat"));
+      if (parsedCommand.aiQuery) {
+        window.dispatchEvent(new CustomEvent("cody-prefill", { detail: parsedCommand.aiQuery }));
+      }
+    } else if (parsedCommand.to) {
+      navigate(parsedCommand.to);
     }
   };
 
@@ -143,13 +164,35 @@ export default function CommandBar() {
                 <Command.Input
                   value={query}
                   onValueChange={setQuery}
-                  placeholder="Search plants, batches, orders, accounts… or ask Cody"
+                  onKeyDown={(e) => { if (isActionMode && e.key === "Enter") { e.preventDefault(); runParsedCommand(); } }}
+                  placeholder={isActionMode ? "Try: create order, show plants in flower room, why is my yield low…" : "Search plants, batches, orders, accounts… or type > to run actions"}
                   className="flex-1 bg-transparent text-[14px] placeholder:text-muted-foreground/60 focus:outline-none"
                 />
-                {isSearching && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+                {isActionMode && <kbd className="text-[9px] font-mono uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded">Actions</kbd>}
+                {isSearching && !isActionMode && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
                 <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border bg-muted/40 text-muted-foreground">esc</kbd>
               </div>
               <Command.List className="max-h-[420px] overflow-y-auto p-2">
+                {isActionMode ? (
+                  <Command.Group heading="Parsed intent" className="[&>[cmdk-group-heading]]:text-[10px] [&>[cmdk-group-heading]]:uppercase [&>[cmdk-group-heading]]:tracking-wider [&>[cmdk-group-heading]]:text-muted-foreground [&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:py-1.5">
+                    <Command.Item
+                      value="parsed-command"
+                      onSelect={runParsedCommand}
+                      className="flex items-start gap-3 px-3 py-3 rounded-md text-[13px] cursor-pointer data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${parsedCommand?.intent === "action" ? "bg-primary/15 text-primary" : parsedCommand?.intent === "navigate" ? "bg-blue-500/15 text-blue-500" : "bg-purple-500/15 text-purple-500"}`}>
+                        {parsedCommand?.intent === "action" ? <Plus className="w-4 h-4" /> : parsedCommand?.intent === "navigate" ? <ArrowRight className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                          {parsedCommand?.intent === "action" ? "Action" : parsedCommand?.intent === "navigate" ? "Navigate" : "Ask Cody"}
+                        </div>
+                        <div className="text-[13px] font-medium">{parsedCommand?.description}</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">Enter to confirm</div>
+                      </div>
+                    </Command.Item>
+                  </Command.Group>
+                ) : null}
                 <Command.Empty className="py-8 text-center text-[12px] text-muted-foreground">
                   {hasQuery && !isSearching ? "No matches. Press Enter to ask Cody." : "Start typing to search…"}
                 </Command.Empty>

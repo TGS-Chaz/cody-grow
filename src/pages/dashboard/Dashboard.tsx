@@ -15,6 +15,7 @@ import {
   useDashboardStats, useUpcomingHarvests, useTodaysTasks, useRecentActivity, useEnvironmentalAlerts,
 } from "@/hooks/useDashboard";
 import { useCompleteTask } from "@/hooks/useTasks";
+import { useReorderAlerts } from "@/hooks/useReorderAlerts";
 import { cn } from "@/lib/utils";
 
 function getGreeting() {
@@ -31,6 +32,7 @@ export default function Dashboard() {
   const { data: stats } = useDashboardStats();
   const { data: harvests } = useUpcomingHarvests(7);
   const { data: tasks, refresh: refreshTasks } = useTodaysTasks();
+  const { data: lowStock } = useReorderAlerts();
   const { data: activity } = useRecentActivity(10);
   const { data: alerts } = useEnvironmentalAlerts(5);
   const completeTask = useCompleteTask();
@@ -48,6 +50,9 @@ export default function Dashboard() {
         <MetricCard icon={Leaf} label="Active Plants" value={stats.activePlants} color="emerald" onClick={() => navigate("/cultivation/plants")} />
         <MetricCard icon={Flower2} label="In Flower" value={stats.inFlower} color="purple" onClick={() => navigate("/cultivation/plants?phase=flowering")} />
         <MetricCard icon={Scissors} label="Upcoming Harvests" value={stats.upcomingHarvests} color="amber" onClick={() => navigate("/cultivation/harvests")} helper="next 7 days" />
+        {lowStock.length > 0 && (
+          <MetricCard icon={AlertTriangle} label="Low Stock" value={lowStock.length} color="amber" onClick={() => navigate("/inventory/batches")} helper={`${lowStock.length === 1 ? "batch is" : "batches are"} at or below reorder point`} />
+        )}
         <MetricCard icon={Package} label="Available Inventory" value={`${(stats.availableWeightGrams / 1000).toFixed(1)}kg`} color="teal" onClick={() => navigate("/inventory/batches?available=true")} />
         <MetricCard icon={ShoppingCart} label="Open Orders" value={stats.openOrders} color="blue" onClick={() => navigate("/sales/orders")} />
         <MetricCard
