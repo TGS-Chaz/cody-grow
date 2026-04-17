@@ -14,6 +14,7 @@ import NoAccessPage from "@/pages/auth/NoAccessPage";
 import Dashboard from "@/pages/dashboard/Dashboard";
 import ProfilePage from "@/pages/ProfilePage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
+import NotFoundPage from "@/pages/NotFoundPage";
 import SettingsHub from "@/pages/settings/SettingsHub";
 import FacilitiesPage from "@/pages/settings/FacilitiesPage";
 import FacilityDetailPage from "@/pages/settings/FacilityDetailPage";
@@ -186,10 +187,13 @@ export default function App() {
                     <Route path="/settings/integrations" element={<IntegrationsPage />} />
                     <Route path="/settings/strains" element={<PlaceholderPage />} />
                     <Route path="/settings/areas" element={<PlaceholderPage />} />
+
+                    {/* 404 inside the app shell — keeps sidebar + header */}
+                    <Route path="*" element={<NotFoundPage />} />
                   </Route>
                 </Route>
 
-                {/* Catch-all: redirect to login */}
+                {/* Unauthenticated catch-all — send to login */}
                 <Route path="*" element={<LoginPage />} />
               </Routes>
             </ShortcutsProvider>

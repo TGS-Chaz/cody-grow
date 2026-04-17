@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 
@@ -15,6 +16,14 @@ interface PageHeaderProps {
 }
 
 export default function PageHeader({ title, description, breadcrumbs, actions, tabs }: PageHeaderProps) {
+  // Keep the browser tab title in sync with whatever page the user is viewing.
+  // Every page in the app renders a PageHeader, so this propagates everywhere.
+  useEffect(() => {
+    const prev = document.title;
+    document.title = `${title} · Cody Grow`;
+    return () => { document.title = prev; };
+  }, [title]);
+
   return (
     <div className="mb-8">
       {breadcrumbs && breadcrumbs.length > 0 && (

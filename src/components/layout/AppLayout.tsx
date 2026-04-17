@@ -49,6 +49,7 @@ import AskCody from "@/components/cody/AskCody";
 import CodyContextProvider from "@/components/cody/CodyContextProvider";
 import CommandBar from "@/components/shared/CommandBar";
 import NotificationBell from "@/components/shared/NotificationBell";
+import ErrorBoundary from "@/components/shared/ErrorBoundary";
 
 const navGroups = [
   { label: "Overview", items: [
@@ -318,7 +319,9 @@ export default function AppLayout() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
             >
-              <Outlet />
+              <ErrorBoundary key={location.pathname}>
+                <Outlet />
+              </ErrorBoundary>
             </motion.div>
           </AnimatePresence>
         </div>
