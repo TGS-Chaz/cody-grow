@@ -51,6 +51,7 @@ import CommandBar from "@/components/shared/CommandBar";
 import NotificationBell from "@/components/shared/NotificationBell";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
 import { useUserPermissions } from "@/hooks/usePermissionCheck";
+import { ProductSwitcher, CODY_PRODUCTS } from "cody-shared";
 
 interface NavItem { to: string; icon: any; label: string; required?: string[] }
 interface NavGroup { label: string; items: NavItem[]; required?: string[] }
@@ -147,16 +148,21 @@ export default function AppLayout() {
         >
           <img src={codyIcon} alt="" className="h-6 w-auto shrink-0" />
           {!collapsed && (
-            <div className="flex items-baseline" style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1 }}>
-              <span style={{ color: "hsl(var(--primary))" }}>c</span>
-              <span className="text-foreground">ody</span>
-              <span
-                className="ml-1 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm self-center"
-                style={{ background: "hsl(168 100% 42% / 0.12)", color: "hsl(168 100% 42%)" }}
-              >
-                grow
-              </span>
-            </div>
+            <>
+              <div className="flex items-baseline flex-1" style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1 }}>
+                <span style={{ color: "hsl(var(--primary))" }}>c</span>
+                <span className="text-foreground">ody</span>
+                <span
+                  className="ml-1 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm self-center"
+                  style={{ background: "hsl(168 100% 42% / 0.12)", color: "hsl(168 100% 42%)" }}
+                >
+                  grow
+                </span>
+              </div>
+              <div className="text-muted-foreground">
+                <ProductSwitcher currentProduct="grow" products={CODY_PRODUCTS} />
+              </div>
+            </>
           )}
         </div>
 
