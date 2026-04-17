@@ -1635,6 +1635,8 @@ export type Database = {
           notes: string | null
           org_id: string
           payment_terms: string | null
+          preferred_delivery_days: string[] | null
+          preferred_delivery_window: string | null
           primary_contact_email: string | null
           primary_contact_name: string | null
           primary_contact_phone: string | null
@@ -1668,6 +1670,8 @@ export type Database = {
           notes?: string | null
           org_id: string
           payment_terms?: string | null
+          preferred_delivery_days?: string[] | null
+          preferred_delivery_window?: string | null
           primary_contact_email?: string | null
           primary_contact_name?: string | null
           primary_contact_phone?: string | null
@@ -1701,6 +1705,8 @@ export type Database = {
           notes?: string | null
           org_id?: string
           payment_terms?: string | null
+          preferred_delivery_days?: string[] | null
+          preferred_delivery_window?: string | null
           primary_contact_email?: string | null
           primary_contact_name?: string | null
           primary_contact_phone?: string | null
@@ -3805,22 +3811,31 @@ export type Database = {
       grow_harvest_plants: {
         Row: {
           created_at: string | null
+          dry_weight_grams: number | null
           harvest_id: string
           id: string
+          notes: string | null
+          phase_at_harvest: string | null
           plant_id: string
           wet_weight_grams: number | null
         }
         Insert: {
           created_at?: string | null
+          dry_weight_grams?: number | null
           harvest_id: string
           id?: string
+          notes?: string | null
+          phase_at_harvest?: string | null
           plant_id: string
           wet_weight_grams?: number | null
         }
         Update: {
           created_at?: string | null
+          dry_weight_grams?: number | null
           harvest_id?: string
           id?: string
+          notes?: string | null
+          phase_at_harvest?: string | null
           plant_id?: string
           wet_weight_grams?: number | null
         }
@@ -5257,6 +5272,8 @@ export type Database = {
           ccrs_upload_file_types: string[] | null
           ccrs_upload_time: string | null
           cody_personality: Json | null
+          commission_rate: number | null
+          commission_type: string | null
           created_at: string | null
           default_inventory_label_template_id: string | null
           default_manifest_template_id: string | null
@@ -5315,6 +5332,8 @@ export type Database = {
           ccrs_upload_file_types?: string[] | null
           ccrs_upload_time?: string | null
           cody_personality?: Json | null
+          commission_rate?: number | null
+          commission_type?: string | null
           created_at?: string | null
           default_inventory_label_template_id?: string | null
           default_manifest_template_id?: string | null
@@ -5373,6 +5392,8 @@ export type Database = {
           ccrs_upload_file_types?: string[] | null
           ccrs_upload_time?: string | null
           cody_personality?: Json | null
+          commission_rate?: number | null
+          commission_type?: string | null
           created_at?: string | null
           default_inventory_label_template_id?: string | null
           default_manifest_template_id?: string | null
@@ -12095,6 +12116,30 @@ export type Database = {
             columns: ["strain_id"]
             isOneToOne: false
             referencedRelation: "grow_strains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grow_recent_activity: {
+        Row: {
+          action: string | null
+          created_at: string | null
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string | null
+          id: string | null
+          org_id: string | null
+          user_avatar: string | null
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grow_audit_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
