@@ -42,6 +42,9 @@ interface Props {
   /** Existing config blob for this integration. */
   initialConfig: IntegrationConfig | null | undefined;
   onSave: (patch: IntegrationConfig) => Promise<void>;
+  /** Optional custom UI rendered above the form (for integrations that need
+   * bespoke connect/sync buttons — e.g. OAuth flows). */
+  customPanel?: React.ReactNode;
 }
 
 /** Small sub-shape for webhook entries stored under config.webhooks. */
@@ -63,7 +66,7 @@ const WEBHOOK_EVENT_OPTIONS = [
   { value: "calibration.logged", label: "Calibration logged" },
 ];
 
-export default function IntegrationConfigModal({ open, onClose, integration, initialConfig, onSave }: Props) {
+export default function IntegrationConfigModal({ open, onClose, integration, initialConfig, onSave, customPanel }: Props) {
   const [values, setValues] = useState<Record<string, any>>({});
   const [connected, setConnected] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
@@ -127,6 +130,7 @@ export default function IntegrationConfigModal({ open, onClose, integration, ini
       }
     >
       <div className="p-6 space-y-4">
+        {customPanel}
         {/* Connection toggle */}
         <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
           <div className="flex-1">

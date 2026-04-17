@@ -76,6 +76,10 @@ export interface PlantFilters {
   cycle_id?: string;
   is_mother?: boolean;
   source_type?: PlantSourceType;
+  /** 1-indexed page number for server-side pagination. When omitted the hook
+   * fetches all matching rows (prior behavior). */
+  page?: number;
+  pageSize?: number;
 }
 
 /** Build a 3-letter strain abbreviation (BDR, OGK, etc.) for plant IDs. */
@@ -91,6 +95,7 @@ export function usePlants(filters?: PlantFilters) {
   const { user } = useAuth();
   const { orgId } = useOrg();
   const [data, setData] = useState<Plant[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -98,15 +103,18 @@ export function usePlants(filters?: PlantFilters) {
   // Snapshot filter primitives so the effect only re-runs when a filter
   // actually changes (not on every object identity change).
   const sig = useMemo(() =>
-    filters ? `${filters.growth_stage ?? ""}:${filters.plant_state ?? ""}:${filters.strain_id ?? ""}:${filters.area_id ?? ""}:${filters.cycle_id ?? ""}:${filters.is_mother ?? ""}:${filters.source_type ?? ""}` : "",
+    filters ? `${filters.growth_stage ?? ""}:${filters.plant_state ?? ""}:${filters.strain_id ?? ""}:${filters.area_id ?? ""}:${filters.cycle_id ?? ""}:${filters.is_mother ?? ""}:${filters.source_type ?? ""}:${filters.page ?? ""}:${filters.pageSize ?? ""}` : "",
   [filters]);
 
   useEffect(() => {
-    if (!user || !orgId) { setData([]); setLoading(false); return; }
+    if (!user || !orgId) { setData([]); setTotalCount(0); setLoading(false); return; }
     let cancelled = false;
     setLoading(true);
     (async () => {
-      let q = supabase.from("grow_plants").select("*").eq("org_id", orgId);
+      const paginated = filters?.page != null && filters?.pageSize != null;
+      let q = paginated
+        ? supabase.from("grow_plants").select("*", { count: "exact" }).eq("org_id", orgId)
+        : supabase.from("grow_plants").select("*").eq("org_id", orgId);
       if (filters?.growth_stage) q = q.eq("ccrs_growth_stage", filters.growth_stage);
       if (filters?.plant_state) q = q.eq("ccrs_plant_state", filters.plant_state);
       if (filters?.strain_id) q = q.eq("strain_id", filters.strain_id);
@@ -114,9 +122,15 @@ export function usePlants(filters?: PlantFilters) {
       if (filters?.cycle_id) q = q.eq("grow_cycle_id", filters.cycle_id);
       if (filters?.is_mother !== undefined) q = q.eq("is_mother_plant", filters.is_mother);
       if (filters?.source_type) q = q.eq("source_type", filters.source_type);
-      const { data: plants, error: err } = await q.order("created_at", { ascending: false });
+      q = q.order("created_at", { ascending: false });
+      if (paginated) {
+        const from = (filters!.page! - 1) * filters!.pageSize!;
+        q = q.range(from, from + filters!.pageSize! - 1);
+      }
+      const { data: plants, error: err, count } = await q;
       if (cancelled) return;
       if (err) { setError(err.message); setLoading(false); return; }
+      if (paginated) setTotalCount(count ?? 0);
 
       // Batch lookups for strains, areas, cycles, sources, phenotypes
       const strainIds = new Set<string>();
@@ -165,6 +179,8 @@ export function usePlants(filters?: PlantFilters) {
   }, [user?.id, orgId, tick, sig]);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
+
+  // Expose totalCount via the returned object below (shape preserved — new field only).
 
   /** Create a plant with auto-generated plant_identifier if blank. */
   const createPlant = useCallback(async (input: PlantInput): Promise<Plant> => {
@@ -222,7 +238,7 @@ export function usePlants(filters?: PlantFilters) {
     return row as Plant;
   }, [refresh]);
 
-  return { data, loading, error, refresh, createPlant, updatePlant };
+  return { data, loading, error, refresh, createPlant, updatePlant, totalCount };
 }
 
 export function usePlantStats(plants: Plant[]) {

@@ -68,6 +68,8 @@ export interface OrderFilters {
   account_id?: string;
   status?: OrderStatus;
   sale_type?: OrderSaleType;
+  page?: number;
+  pageSize?: number;
 }
 
 export function useOrders(filters: OrderFilters = {}) {
@@ -77,18 +79,28 @@ export function useOrders(filters: OrderFilters = {}) {
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
 
-  const sig = [filters.account_id, filters.status, filters.sale_type].join(":");
+  const sig = [filters.account_id, filters.status, filters.sale_type, filters.page ?? "", filters.pageSize ?? ""].join(":");
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
-    if (!user || !orgId) { setData([]); setLoading(false); return; }
+    if (!user || !orgId) { setData([]); setTotalCount(0); setLoading(false); return; }
     let cancelled = false;
     setLoading(true);
     (async () => {
-      let q = supabase.from("grow_orders").select("*").eq("org_id", orgId);
+      const paginated = filters.page != null && filters.pageSize != null;
+      let q = paginated
+        ? supabase.from("grow_orders").select("*", { count: "exact" }).eq("org_id", orgId)
+        : supabase.from("grow_orders").select("*").eq("org_id", orgId);
       if (filters.account_id) q = q.eq("account_id", filters.account_id);
       if (filters.status) q = q.eq("status", filters.status);
       if (filters.sale_type) q = q.eq("sale_type", filters.sale_type);
-      const { data: rows } = await q.order("created_at", { ascending: false, nullsFirst: false });
+      q = q.order("created_at", { ascending: false, nullsFirst: false });
+      if (paginated) {
+        const from = (filters.page! - 1) * filters.pageSize!;
+        q = q.range(from, from + filters.pageSize! - 1);
+      }
+      const { data: rows, count } = await q;
+      if (paginated) setTotalCount(count ?? 0);
       const accountIds = Array.from(new Set(((rows ?? []) as any[]).map((r) => r.account_id).filter(Boolean)));
       const orderIds = ((rows ?? []) as any[]).map((r) => r.id);
       const [accountsRes, itemsRes] = await Promise.all([
@@ -111,7 +123,7 @@ export function useOrders(filters: OrderFilters = {}) {
   }, [user?.id, orgId, tick, sig]);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
-  return { data, loading, refresh };
+  return { data, loading, refresh, totalCount };
 }
 
 export function useOrder(id: string | undefined) {

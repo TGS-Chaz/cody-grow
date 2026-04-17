@@ -38,6 +38,8 @@ export interface Batch {
   procurement_farm: string | null;
   procurement_license: string | null;
   notes: string | null;
+  image_url: string | null;
+  marketplace_group_id: string | null;
   ccrs_created_by_username: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -64,6 +66,9 @@ export interface BatchFilters {
   is_non_cannabis?: boolean;
   has_parent?: boolean;
   q?: string;
+  /** Optional server-side pagination */
+  page?: number;
+  pageSize?: number;
 }
 
 export interface BatchStats {
@@ -174,14 +179,20 @@ export function useBatches(filters: BatchFilters = {}) {
     filters.is_medical == null ? "" : String(filters.is_medical),
     filters.is_doh_compliant == null ? "" : String(filters.is_doh_compliant),
     filters.has_parent == null ? "" : String(filters.has_parent),
+    filters.page ?? "", filters.pageSize ?? "",
   ].join(":");
 
+  const [totalCount, setTotalCount] = useState<number>(0);
+
   useEffect(() => {
-    if (!user || !orgId) { setData([]); setLoading(false); return; }
+    if (!user || !orgId) { setData([]); setTotalCount(0); setLoading(false); return; }
     let cancelled = false;
     setLoading(true);
     (async () => {
-      let q = supabase.from("grow_batches").select("*").eq("org_id", orgId);
+      const paginated = filters.page != null && filters.pageSize != null;
+      let q = paginated
+        ? supabase.from("grow_batches").select("*", { count: "exact" }).eq("org_id", orgId)
+        : supabase.from("grow_batches").select("*").eq("org_id", orgId);
       if (filters.product_id) q = q.eq("product_id", filters.product_id);
       if (filters.strain_id) q = q.eq("strain_id", filters.strain_id);
       if (filters.area_id) q = q.eq("area_id", filters.area_id);
@@ -192,9 +203,15 @@ export function useBatches(filters: BatchFilters = {}) {
       if (filters.is_non_cannabis != null) q = q.eq("is_non_cannabis", filters.is_non_cannabis);
       if (filters.has_parent === true) q = q.not("parent_batch_id", "is", null);
       if (filters.has_parent === false) q = q.is("parent_batch_id", null);
-      const { data: rows, error: err } = await q.order("created_at", { ascending: false, nullsFirst: false });
+      q = q.order("created_at", { ascending: false, nullsFirst: false });
+      if (paginated) {
+        const from = (filters.page! - 1) * filters.pageSize!;
+        q = q.range(from, from + filters.pageSize! - 1);
+      }
+      const { data: rows, error: err, count } = await q;
       if (cancelled) return;
       if (err) { setError(err.message); setLoading(false); return; }
+      if (paginated) setTotalCount(count ?? 0);
 
       const joins = await fetchBatchJoins(rows ?? []);
       const qaChain = new Set<string>();
@@ -230,7 +247,7 @@ export function useBatches(filters: BatchFilters = {}) {
   }, [user?.id, orgId, tick, sig]);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
-  return { data, loading, error, refresh };
+  return { data, loading, error, refresh, totalCount };
 }
 
 export function useBatch(id: string | undefined) {
@@ -321,6 +338,7 @@ export interface CreateBatchInput {
   expiration_date?: string | null;
   packaged_date?: string | null;
   notes?: string | null;
+  image_url?: string | null;
 }
 
 export function useCreateBatch() {
@@ -359,8 +377,9 @@ export function useCreateBatch() {
         expiration_date: input.expiration_date ?? null,
         packaged_date: input.packaged_date ?? null,
         notes: input.notes ?? null,
+        image_url: input.image_url ?? null,
         created_by: user?.id ?? null,
-      })
+      } as any)
       .select("*").single();
     if (err) throw err;
     return data as unknown as Batch;

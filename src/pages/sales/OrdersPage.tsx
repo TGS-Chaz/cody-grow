@@ -14,6 +14,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import StatCard from "@/components/shared/StatCard";
 import DataTable, { RowActionsCell } from "@/components/shared/DataTable";
 import FiltersBar from "@/components/shared/FiltersBar";
+import PaginationControls from "@/components/shared/PaginationControls";
 import StatusPill from "@/components/shared/StatusPill";
 import DateTime from "@/components/shared/DateTime";
 import { useShortcut } from "@/components/shared/KeyboardShortcuts";
@@ -42,7 +43,12 @@ export default function OrdersPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState<OrderFilters>({});
-  const { data: orders, loading, refresh } = useOrders(filters);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const filterSig = useMemo(() => Object.values(filters).map((v) => v ?? "").join(":"), [filters]);
+  useEffect(() => { setPage(1); }, [filterSig]);
+  const paginatedFilters = useMemo<OrderFilters>(() => ({ ...filters, page, pageSize }), [filters, page, pageSize]);
+  const { data: orders, loading, refresh, totalCount } = useOrders(paginatedFilters);
   const stats = useOrderStats(orders);
   const cancel = useCancelOrder();
 
@@ -172,6 +178,13 @@ export default function OrdersPage() {
           description: orders.length === 0 ? "Create your first order. Select an account, add products, allocate inventory, and generate a manifest." : "Clear filters or adjust the search.",
           action: orders.length === 0 ? <Button onClick={() => setCreateOpen(true)} className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Create Order</Button> : undefined,
         }}
+      />
+
+      <PaginationControls
+        page={page} pageSize={pageSize} totalCount={totalCount}
+        totalPages={Math.max(1, Math.ceil(totalCount / pageSize))}
+        onPageChange={setPage}
+        onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
       />
 
       <CreateOrderModal open={createOpen} onClose={() => setCreateOpen(false)} initialAccountId={initialAccountId} onSuccess={(o) => { refresh(); navigate(`/sales/orders/${o.id}`); }} />

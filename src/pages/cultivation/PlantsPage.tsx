@@ -12,6 +12,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import StatCard from "@/components/shared/StatCard";
 import DataTable, { RowActionsCell } from "@/components/shared/DataTable";
 import FiltersBar from "@/components/shared/FiltersBar";
+import PaginationControls from "@/components/shared/PaginationControls";
 import StatusPill from "@/components/shared/StatusPill";
 import CopyableId from "@/components/shared/CopyableId";
 import PhaseColorBadge from "@/components/shared/PhaseColorBadge";
@@ -70,7 +71,27 @@ export default function PlantsPage() {
     area_id: areaFromQuery ?? undefined,
     cycle_id: cycleFromQuery ?? undefined,
   }));
-  const { data: plants, loading, createPlant, updatePlant, refresh } = usePlants(filters);
+  const [page, setPage] = useState<number>(() => {
+    const p = parseInt(searchParams.get("page") ?? "1", 10);
+    return Number.isFinite(p) && p > 0 ? p : 1;
+  });
+  const [pageSize, setPageSize] = useState<number>(50);
+  // Pass page+pageSize through to the hook for server-side pagination
+  const plantsFilters = useMemo<PlantFilters>(() => ({ ...filters, page, pageSize }), [filters, page, pageSize]);
+  const { data: plants, loading, createPlant, updatePlant, refresh, totalCount } = usePlants(plantsFilters);
+  // Reset page to 1 when any filter changes
+  const filterSig = useMemo(() => Object.values(filters).map((v) => v ?? "").join(":"), [filters]);
+  useEffect(() => { setPage(1); }, [filterSig]);
+  // URL-sync page number
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (page <= 1) next.delete("page"); else next.set("page", String(page));
+    // Intentionally bypass extra re-renders from setSearchParams setter identity
+    if ((searchParams.get("page") ?? "") !== (next.get("page") ?? "")) {
+      window.history.replaceState({}, "", `${window.location.pathname}${next.toString() ? `?${next.toString()}` : ""}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
   const stats = usePlantStats(plants);
   const designateMother = useDesignateMother();
 
@@ -493,6 +514,15 @@ export default function PlantsPage() {
             </div>
           ) : undefined,
         }}
+      />
+
+      <PaginationControls
+        page={page}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        totalPages={Math.max(1, Math.ceil(totalCount / pageSize))}
+        onPageChange={setPage}
+        onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
       />
 
       {/* Modals */}

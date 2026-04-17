@@ -15,6 +15,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import PageHeader from "@/components/shared/PageHeader";
 import StatCard from "@/components/shared/StatCard";
 import StatusPill from "@/components/shared/StatusPill";
+import MarketPricingCard from "@/components/ai/MarketPricingCard";
+import { useMarketPrice } from "@/hooks/usePricingIntel";
 import DataTable from "@/components/shared/DataTable";
 import CopyableId from "@/components/shared/CopyableId";
 import DateTime from "@/components/shared/DateTime";
@@ -222,7 +224,7 @@ export default function ProductDetailPage() {
         <TabsContent value="batches"><BatchesPanel productId={product.id} /></TabsContent>
         <TabsContent value="sales"><SalesPanel productId={product.id} /></TabsContent>
         <TabsContent value="lab"><LabResultsPanel productId={product.id} /></TabsContent>
-        <TabsContent value="pricing"><PricingPanel productId={product.id} /></TabsContent>
+        <TabsContent value="pricing"><PricingPanel productId={product.id} product={product} /></TabsContent>
         <TabsContent value="activity">
           <div className="rounded-xl border border-border bg-card p-12 text-center">
             <Activity className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
@@ -472,9 +474,15 @@ function LabResultsPanel({ productId }: { productId: string }) {
   );
 }
 
-function PricingPanel({ productId }: { productId: string }) {
+function PricingPanel({ productId, product }: { productId: string; product: any }) {
   const navigate = useNavigate();
   const { data: entries, loading } = useProductPricing(productId);
+  const defaultPrice = entries.find((e: any) => e.price_list?.is_default)?.unit_price ?? product?.unit_price ?? null;
+  const pricing = useMarketPrice(
+    product?.ccrs_inventory_category ?? product?.category,
+    product?.strain?.name ?? null,
+    defaultPrice != null ? Number(defaultPrice) : null,
+  );
 
   const columns: ColumnDef<any>[] = [
     {
@@ -501,7 +509,12 @@ function PricingPanel({ productId }: { productId: string }) {
       />
     );
   }
-  return <DataTable columns={columns} data={entries} />;
+  return (
+    <div className="space-y-4">
+      <MarketPricingCard data={pricing} categoryLabel={product?.ccrs_inventory_category ?? product?.category} strainName={product?.strain?.name} />
+      <DataTable columns={columns} data={entries} />
+    </div>
+  );
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

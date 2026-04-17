@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Store, Plus, ExternalLink, Copy, Edit, Archive, Loader2, Lock, Globe, Users,
+  Store, Plus, ExternalLink, Copy, Edit, Archive, Loader2, Lock, Globe, Users, Send,
+  Layers, Trash2, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -17,7 +18,10 @@ import { useCodyContext } from "@/hooks/useCodyContext";
 import {
   useMarketplaceMenus, useCreateMenu, useUpdateMenu, useMarketplaceItems,
   useAddToMarketplace, useRemoveFromMarketplace, MarketplaceMenu,
+  useMarketplaceGroups, useCreateGroup, useUpdateGroup, useDeleteGroup,
 } from "@/hooks/useMarketplace";
+import { useOrg } from "@/lib/org";
+import { callEdgeFunction } from "@/lib/edge-function";
 
 export default function MarketplaceConfigPage() {
   const navigate = useNavigate();
@@ -29,6 +33,7 @@ export default function MarketplaceConfigPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editMenu, setEditMenu] = useState<MarketplaceMenu | null>(null);
+  const [groupsMenu, setGroupsMenu] = useState<MarketplaceMenu | null>(null);
 
   const { setContext, clearContext } = useCodyContext();
   useEffect(() => {
@@ -63,6 +68,9 @@ export default function MarketplaceConfigPage() {
             <DropdownMenuTrigger asChild><button className="p-1 rounded hover:bg-accent">⋯</button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setEditMenu(row.original)}><Edit className="w-3.5 h-3.5" /> Edit</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setGroupsMenu(row.original)}>
+                <Layers className="w-3.5 h-3.5" /> Manage Groups
+              </DropdownMenuItem>
               {row.original.public_slug && (
                 <DropdownMenuItem onClick={() => window.open(`/menu/${row.original.public_slug}`, "_blank")}>
                   <ExternalLink className="w-3.5 h-3.5" /> View Public Page
@@ -123,7 +131,12 @@ export default function MarketplaceConfigPage() {
         title="Marketplace"
         description="Your B2B wholesale storefront"
         breadcrumbs={[{ label: "Marketplace" }]}
-        actions={<Button onClick={() => setCreateOpen(true)} className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Create Menu</Button>}
+        actions={
+          <div className="flex items-center gap-2">
+            <PushUpdatesButton />
+            <Button onClick={() => setCreateOpen(true)} className="gap-1.5"><Plus className="w-3.5 h-3.5" /> Create Menu</Button>
+          </div>
+        }
       />
 
       <div className="mb-8">
@@ -143,7 +156,117 @@ export default function MarketplaceConfigPage() {
       </div>
 
       <MenuModal open={createOpen || !!editMenu} onClose={() => { setCreateOpen(false); setEditMenu(null); }} menu={editMenu} onSuccess={() => refresh()} />
+      <GroupsManagerModal open={!!groupsMenu} onClose={() => setGroupsMenu(null)} menu={groupsMenu} />
     </div>
+  );
+}
+
+function GroupsManagerModal({ open, onClose, menu }: { open: boolean; onClose: () => void; menu: MarketplaceMenu | null }) {
+  const { data: groups, refresh } = useMarketplaceGroups(menu?.id);
+  const createGroup = useCreateGroup();
+  const updateGroup = useUpdateGroup();
+  const deleteGroup = useDeleteGroup();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleAdd = async () => {
+    if (!menu || !name.trim()) return;
+    setSaving(true);
+    try {
+      await createGroup({ menu_id: menu.id, name: name.trim(), description: description.trim() || null, sort_order: groups.length });
+      setName(""); setDescription(""); refresh(); toast.success("Group added");
+    } catch (err: any) { toast.error(err?.message ?? "Failed"); }
+    finally { setSaving(false); }
+  };
+
+  const handleReorder = async (id: string, dir: -1 | 1) => {
+    const idx = groups.findIndex((g) => g.id === id);
+    const target = groups[idx + dir];
+    if (!target) return;
+    try {
+      await updateGroup(id, { sort_order: target.sort_order ?? idx + dir });
+      await updateGroup(target.id, { sort_order: groups[idx].sort_order ?? idx });
+      refresh();
+    } catch (err: any) { toast.error(err?.message ?? "Failed"); }
+  };
+
+  if (!menu) return null;
+
+  return (
+    <ScrollableModal
+      open={open} onClose={onClose} size="md"
+      header={<ModalHeader icon={<Layers className="w-4 h-4 text-primary" />} title={`Catalog groups — ${menu.name}`} subtitle="Organize items into branded categories (e.g. Premium Flower, New Arrivals)" />}
+      footer={<Button type="button" variant="ghost" onClick={onClose}>Close</Button>}
+    >
+      <div className="p-6 space-y-4">
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Group name (e.g. Premium Flower)" />
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" />
+          </div>
+          <Button onClick={handleAdd} disabled={saving || !name.trim()} size="sm" className="gap-1.5">
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+            Add Group
+          </Button>
+        </div>
+        {groups.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border p-8 text-center text-[12px] text-muted-foreground">
+            No groups yet. Add one above.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {groups.map((g, idx) => (
+              <div key={g.id} className="flex items-center gap-2 rounded-lg border border-border bg-card p-3">
+                <div className="flex flex-col gap-0.5">
+                  <button onClick={() => handleReorder(g.id, -1)} disabled={idx === 0} className="p-0.5 hover:text-primary disabled:opacity-30"><ArrowUp className="w-3 h-3" /></button>
+                  <button onClick={() => handleReorder(g.id, 1)} disabled={idx === groups.length - 1} className="p-0.5 hover:text-primary disabled:opacity-30"><ArrowDown className="w-3 h-3" /></button>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-medium">{g.name}</div>
+                  {g.description && <div className="text-[11px] text-muted-foreground truncate">{g.description}</div>}
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!window.confirm(`Delete group "${g.name}"?`)) return;
+                    try { await deleteGroup(g.id); toast.success("Deleted"); refresh(); }
+                    catch (err: any) { toast.error(err?.message ?? "Failed"); }
+                  }}
+                  className="p-2 rounded hover:bg-destructive/10 text-destructive"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </ScrollableModal>
+  );
+}
+
+function PushUpdatesButton() {
+  const { orgId } = useOrg();
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button
+      variant="outline"
+      disabled={busy || !orgId}
+      className="gap-1.5"
+      onClick={async () => {
+        if (!orgId) return;
+        setBusy(true);
+        try {
+          const res = await callEdgeFunction<{ pushed: number; results: Array<{ error?: string }> }>("push-menu-update", { org_id: orgId }, 120_000);
+          const errs = (res.results ?? []).filter((r) => r.error).length;
+          toast.success(`Pushed to ${res.pushed} account${res.pushed === 1 ? "" : "s"}${errs ? ` · ${errs} error${errs === 1 ? "" : "s"}` : ""}`);
+        } catch (err: any) { toast.error(err?.message ?? "Push failed"); }
+        finally { setBusy(false); }
+      }}
+    >
+      {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+      Push Updates Now
+    </Button>
   );
 }
 

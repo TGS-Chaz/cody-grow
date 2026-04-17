@@ -151,11 +151,12 @@ export function useKioskScanBatch() {
     const { data } = await supabase.from("grow_batches")
       .select("*").eq("org_id", orgId).or(`barcode.eq.${barcode},external_id.eq.${barcode}`).maybeSingle();
     if (!data) return null;
-    const [product, strain] = await Promise.all([
+    const [product, strain, area] = await Promise.all([
       (data as any).product_id ? supabase.from("grow_products").select("name, ccrs_inventory_category").eq("id", (data as any).product_id).maybeSingle() : Promise.resolve({ data: null }),
       (data as any).strain_id ? supabase.from("grow_strains").select("name, type").eq("id", (data as any).strain_id).maybeSingle() : Promise.resolve({ data: null }),
+      (data as any).area_id ? supabase.from("grow_areas").select("name").eq("id", (data as any).area_id).maybeSingle() : Promise.resolve({ data: null }),
     ]);
-    return { ...(data as any), product: (product as any).data, strain: (strain as any).data };
+    return { ...(data as any), product: (product as any).data, strain: (strain as any).data, area: (area as any).data };
   }, [orgId]);
 }
 

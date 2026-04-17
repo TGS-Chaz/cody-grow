@@ -8,6 +8,7 @@ import ScrollableModal, { ModalHeader } from "@/components/ui/scrollable-modal";
 import PageHeader from "@/components/shared/PageHeader";
 import StatCard from "@/components/shared/StatCard";
 import FiltersBar from "@/components/shared/FiltersBar";
+import PaginationControls from "@/components/shared/PaginationControls";
 import EmptyState from "@/components/shared/EmptyState";
 import DateTime from "@/components/shared/DateTime";
 import { useCodyContext } from "@/hooks/useCodyContext";
@@ -29,7 +30,12 @@ const TYPE_COLOR = Object.fromEntries(LOG_TYPES.map((t) => [t.value, t.color]));
 export default function GrowLogsPage() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState<GrowLogFilters>({});
-  const { data: logs, loading, refresh } = useGrowLogs(filters, 200);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const filterSig = useMemo(() => `${filters.log_type ?? ""}:${filters.area_id ?? ""}:${filters.cycle_id ?? ""}`, [filters]);
+  useEffect(() => { setPage(1); }, [filterSig]);
+  const paginatedFilters = useMemo<GrowLogFilters>(() => ({ ...filters, page, pageSize }), [filters, page, pageSize]);
+  const { data: logs, loading, refresh, totalCount } = useGrowLogs(paginatedFilters, 200);
   const stats = useGrowLogStats(logs);
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -138,6 +144,13 @@ export default function GrowLogsPage() {
           ))}
         </div>
       )}
+
+      <PaginationControls
+        page={page} pageSize={pageSize} totalCount={totalCount}
+        totalPages={Math.max(1, Math.ceil(totalCount / pageSize))}
+        onPageChange={setPage}
+        onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
+      />
 
       <CreateLogModal open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => refresh()} />
       <span className="hidden"><Camera /></span>

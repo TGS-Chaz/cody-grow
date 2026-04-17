@@ -15,6 +15,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import StatCard from "@/components/shared/StatCard";
 import DataTable, { RowActionsCell } from "@/components/shared/DataTable";
 import FiltersBar from "@/components/shared/FiltersBar";
+import PaginationControls from "@/components/shared/PaginationControls";
 import StatusPill from "@/components/shared/StatusPill";
 import DateTime from "@/components/shared/DateTime";
 import CopyableId from "@/components/shared/CopyableId";
@@ -47,7 +48,12 @@ const QA_VARIANT: Record<NonNullable<Batch["qa_status"]>, { label: string; varia
 export default function BatchesPage() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState<BatchFilters>({});
-  const { data: batches, loading, refresh } = useBatches(filters);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const paginatedFilters = useMemo<BatchFilters>(() => ({ ...filters, page, pageSize }), [filters, page, pageSize]);
+  const filterSig = useMemo(() => Object.values(filters).map((v) => v ?? "").join(":"), [filters]);
+  useEffect(() => { setPage(1); }, [filterSig]);
+  const { data: batches, loading, refresh, totalCount } = useBatches(paginatedFilters);
   const stats = useBatchStats(batches);
   const makeAvailable = useMakeBatchAvailable();
   const { setContext, clearContext } = useCodyContext();
@@ -443,6 +449,13 @@ export default function BatchesPage() {
             </div>
           ) : undefined,
         }}
+      />
+
+      <PaginationControls
+        page={page} pageSize={pageSize} totalCount={totalCount}
+        totalPages={Math.max(1, Math.ceil(totalCount / pageSize))}
+        onPageChange={setPage}
+        onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
       />
 
       <CreateBatchModal open={createOpen} onClose={() => setCreateOpen(false)} onSuccess={() => refresh()} />

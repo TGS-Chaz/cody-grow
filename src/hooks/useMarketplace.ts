@@ -120,8 +120,10 @@ export interface MarketplaceBatch {
   current_weight_grams: number | null;
   unit_cost: number | null;
   marketplace_menu_ids: string[] | null;
-  product?: { name: string; ccrs_inventory_category: string | null; unit_price: number | null } | null;
-  strain?: { name: string; type: string | null } | null;
+  marketplace_group_id: string | null;
+  image_url: string | null;
+  product?: { name: string; ccrs_inventory_category: string | null; unit_price: number | null; image_url: string | null } | null;
+  strain?: { name: string; type: string | null; strain_photo_url?: string | null } | null;
   potency?: { thc_total_pct: number | null; cbd_total_pct: number | null } | null;
 }
 
@@ -201,6 +203,7 @@ export function useRemoveFromMarketplace() {
 export function usePublicMenu(slug: string | undefined) {
   const [menu, setMenu] = useState<MarketplaceMenu | null>(null);
   const [items, setItems] = useState<MarketplaceBatch[]>([]);
+  const [groups, setGroups] = useState<MarketplaceGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -220,10 +223,11 @@ export function usePublicMenu(slug: string | undefined) {
       const ids = ((batches ?? []) as any[]).map((r) => r.id);
       const productIds = Array.from(new Set(((batches ?? []) as any[]).map((r) => r.product_id).filter(Boolean)));
       const strainIds = Array.from(new Set(((batches ?? []) as any[]).map((r) => r.strain_id).filter(Boolean)));
-      const [pRes, sRes, qaLotsRes] = await Promise.all([
-        productIds.length > 0 ? supabase.from("grow_products").select("id, name, ccrs_inventory_category, unit_price").in("id", productIds) : Promise.resolve({ data: [] }),
-        strainIds.length > 0 ? supabase.from("grow_strains").select("id, name, type").in("id", strainIds) : Promise.resolve({ data: [] }),
+      const [pRes, sRes, qaLotsRes, groupsRes] = await Promise.all([
+        productIds.length > 0 ? supabase.from("grow_products").select("id, name, ccrs_inventory_category, unit_price, image_url").in("id", productIds) : Promise.resolve({ data: [] }),
+        strainIds.length > 0 ? supabase.from("grow_strains").select("id, name, type, strain_photo_url").in("id", strainIds) : Promise.resolve({ data: [] }),
         ids.length > 0 ? supabase.from("grow_qa_lots").select("id, parent_batch_id").in("parent_batch_id", ids) : Promise.resolve({ data: [] }),
+        supabase.from("grow_marketplace_groups").select("*").eq("menu_id", menuRow.id).eq("is_active", true).order("sort_order", { ascending: true, nullsFirst: false }).order("name"),
       ]);
       const lotIds = ((qaLotsRes.data ?? []) as any[]).map((l) => l.id);
       const { data: qaResults } = lotIds.length > 0
@@ -239,6 +243,7 @@ export function usePublicMenu(slug: string | undefined) {
       const sById = new Map<string, any>((sRes.data ?? []).map((s: any) => [s.id, s]));
       if (cancelled) return;
       setMenu(menuRow as any);
+      setGroups(((groupsRes as any)?.data ?? []) as MarketplaceGroup[]);
       setItems(((batches ?? []) as any[]).map((r) => ({
         ...r,
         product: r.product_id ? pById.get(r.product_id) ?? null : null,
@@ -250,7 +255,7 @@ export function usePublicMenu(slug: string | undefined) {
     return () => { cancelled = true; };
   }, [slug]);
 
-  return { menu, items, loading, error };
+  return { menu, items, groups, loading, error };
 }
 
 export function useSubmitInquiry() {
@@ -268,5 +273,83 @@ export function useSubmitInquiry() {
       user_email: input.contact_email,
       changes_json: input,
     });
+  }, []);
+}
+
+// ─── Catalog groups ─────────────────────────────────────────────────────────
+
+export interface MarketplaceGroup {
+  id: string;
+  org_id: string;
+  menu_id: string;
+  name: string;
+  description: string | null;
+  sort_order: number | null;
+  is_active: boolean | null;
+  created_at: string | null;
+}
+
+export function useMarketplaceGroups(menuId: string | undefined) {
+  const { user } = useAuth();
+  const { orgId } = useOrg();
+  const [data, setData] = useState<MarketplaceGroup[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!user || !orgId || !menuId) { setData([]); setLoading(false); return; }
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      const { data: rows } = await supabase.from("grow_marketplace_groups")
+        .select("*").eq("org_id", orgId).eq("menu_id", menuId)
+        .order("sort_order", { ascending: true, nullsFirst: false })
+        .order("name");
+      if (cancelled) return;
+      setData((rows ?? []) as MarketplaceGroup[]);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, orgId, menuId, tick]);
+
+  const refresh = useCallback(() => setTick((t) => t + 1), []);
+  return { data, loading, refresh };
+}
+
+export function useCreateGroup() {
+  const { orgId } = useOrg();
+  return useCallback(async (input: { menu_id: string; name: string; description?: string | null; sort_order?: number | null }) => {
+    if (!orgId) throw new Error("No active org");
+    const { data, error } = await supabase.from("grow_marketplace_groups").insert({
+      org_id: orgId,
+      menu_id: input.menu_id,
+      name: input.name,
+      description: input.description ?? null,
+      sort_order: input.sort_order ?? 0,
+      is_active: true,
+    }).select("*").single();
+    if (error) throw error;
+    return data as MarketplaceGroup;
+  }, [orgId]);
+}
+
+export function useUpdateGroup() {
+  return useCallback(async (id: string, patch: Partial<MarketplaceGroup>) => {
+    const { error } = await supabase.from("grow_marketplace_groups").update(patch as any).eq("id", id);
+    if (error) throw error;
+  }, []);
+}
+
+export function useDeleteGroup() {
+  return useCallback(async (id: string) => {
+    const { error } = await supabase.from("grow_marketplace_groups").delete().eq("id", id);
+    if (error) throw error;
+  }, []);
+}
+
+export function useAssignBatchToGroup() {
+  return useCallback(async (batchId: string, groupId: string | null) => {
+    const { error } = await supabase.from("grow_batches").update({ marketplace_group_id: groupId } as any).eq("id", batchId);
+    if (error) throw error;
   }, []);
 }

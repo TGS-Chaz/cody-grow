@@ -43,6 +43,7 @@ const PRIORITY_COLOR: Record<string, string> = {
 
 export default function TasksPage() {
   const navigate = useNavigate();
+  const { orgId } = useOrg();
   const [filters, setFilters] = useState<TaskFilters>({});
   const { data: tasks, loading, refresh } = useTasks(filters);
   const stats = useTaskStats(tasks);
@@ -66,6 +67,44 @@ export default function TasksPage() {
     setContext({ context_type: "tasks_list", page_data: { stats, view, filters } });
     return () => clearContext();
   }, [setContext, clearContext, stats, view, filters]);
+
+  // On each Tasks page mount, scan for newly-overdue tasks and create a
+  // one-time notification per (task, overdue) pair for the assignee.
+  useEffect(() => {
+    if (!orgId || tasks.length === 0) return;
+    const now = Date.now();
+    const overdue = tasks.filter((t) => {
+      if (!t.scheduled_end) return false;
+      if (t.status === "completed" || t.status === "cancelled") return false;
+      return new Date(t.scheduled_end).getTime() < now;
+    });
+    if (overdue.length === 0) return;
+    (async () => {
+      for (const t of overdue) {
+        if (!t.assigned_to_user_id) continue;
+        const { data: existing } = await supabase
+          .from("grow_in_app_notifications")
+          .select("id")
+          .eq("user_id", t.assigned_to_user_id)
+          .eq("entity_type", "task")
+          .eq("entity_id", t.id)
+          .eq("event_key", "task_overdue")
+          .maybeSingle();
+        if (existing) continue;
+        await supabase.from("grow_in_app_notifications").insert({
+          org_id: orgId,
+          user_id: t.assigned_to_user_id,
+          event_key: "task_overdue",
+          title: `Overdue task: ${t.title}`,
+          content: `Was due ${new Date(t.scheduled_end!).toLocaleString()}.`,
+          action_url: "/operations/tasks",
+          entity_type: "task",
+          entity_id: t.id,
+        });
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId, tasks.length]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

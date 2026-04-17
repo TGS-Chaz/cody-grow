@@ -9,6 +9,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import StatCard from "@/components/shared/StatCard";
 import DataTable from "@/components/shared/DataTable";
 import FiltersBar from "@/components/shared/FiltersBar";
+import PaginationControls from "@/components/shared/PaginationControls";
 import DateTime from "@/components/shared/DateTime";
 import { useCodyContext } from "@/hooks/useCodyContext";
 import { useAuditLog, useAuditLogStats, AuditLogEntry, AuditLogFilters } from "@/hooks/useAuditLog";
@@ -41,7 +42,12 @@ const ENTITY_PATHS: Record<string, (id: string) => string> = {
 export default function AuditLogPage() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState<AuditLogFilters>({});
-  const { data: entries, loading } = useAuditLog(filters, 200);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const filterSig = useMemo(() => `${filters.entity_type ?? ""}:${filters.action ?? ""}`, [filters]);
+  useEffect(() => { setPage(1); }, [filterSig]);
+  const paginated = useMemo<AuditLogFilters>(() => ({ ...filters, page, pageSize }), [filters, page, pageSize]);
+  const { data: entries, loading, totalCount } = useAuditLog(paginated, 200);
   const stats = useAuditLogStats(entries);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -146,6 +152,12 @@ export default function AuditLogPage() {
           title: entries.length === 0 ? "No audit entries yet" : "No matches",
           description: entries.length === 0 ? "Compliance-sensitive actions will be logged here. Try creating an order or completing a harvest." : "Clear filters or adjust search.",
         }}
+      />
+      <PaginationControls
+        page={page} pageSize={pageSize} totalCount={totalCount}
+        totalPages={Math.max(1, Math.ceil(totalCount / pageSize))}
+        onPageChange={setPage}
+        onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
       />
 
       {/* Expanded changes preview */}

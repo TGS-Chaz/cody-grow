@@ -108,6 +108,7 @@ export default function CommandBar() {
   ];
 
   const quickActions: CommandItem[] = [
+    { id: "locate-inventory", label: "Locate Inventory (batch barcode or product)", action: () => setQuery("batch "), icon: Warehouse, group: "Locate", keywords: ["find", "where", "location", "barcode"] },
     { id: "new-facility", label: "New Facility", to: "/settings/facilities?new=1", icon: Plus, group: "Create", keywords: ["add", "create"] },
     { id: "new-plant", label: "New Plant", to: "/cultivation/plants?new=1", icon: Plus, group: "Create", keywords: ["add", "create"] },
     { id: "new-cycle", label: "New Grow Cycle", to: "/cultivation/grow-cycles?new=1", icon: Plus, group: "Create" },

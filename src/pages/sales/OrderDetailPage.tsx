@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ShoppingCart, Loader2, Send, Package, Truck, CheckCircle2, XCircle, Activity, MoreHorizontal,
-  Plus, Trash2, Building2, DollarSign, FileText, Edit, ArrowRight, Printer, Receipt,
+  Plus, Trash2, Building2, DollarSign, FileText, Edit, ArrowRight, Printer, Receipt, MessageSquare,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -27,6 +27,7 @@ import {
 import { PackagingModal } from "@/pages/inventory/PackagingModal";
 import { generatePicklist, openPicklistWindow } from "@/lib/documents/generatePicklist";
 import { useGenerateInvoice, useMarkInvoicePaid } from "@/hooks/useInvoices";
+import { useSendSMS, useSMSEnabled } from "@/hooks/useSMS";
 import type { Batch } from "@/hooks/useBatches";
 import { ORDER_SALE_TYPE_LABELS, OrderSaleType } from "@/lib/schema-enums";
 import { AddOrderItemModal } from "./OrderModals";
@@ -69,6 +70,8 @@ export default function OrderDetailPage() {
   const cancel = useCancelOrder();
   const removeItem = useRemoveOrderItem();
   const allocatePacked = useAllocatePackedSublot();
+  const smsEnabled = useSMSEnabled();
+  const sendSMS = useSendSMS();
 
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [packSuggestions, setPackSuggestions] = useState<PackToOrderSuggestion[]>([]);
@@ -146,6 +149,23 @@ export default function OrderDetailPage() {
                     } catch (err: any) { toast.error(err?.message ?? "Failed to generate picklist"); }
                   }}>
                     <Printer className="w-3.5 h-3.5" /> Generate Picklist
+                  </DropdownMenuItem>
+                )}
+                {smsEnabled && order.status && order.status !== "draft" && order.status !== "cancelled" && (
+                  <DropdownMenuItem onClick={async () => {
+                    if (!order.account_id) { toast.error("Order has no account"); return; }
+                    const { data: acct } = await supabase
+                      .from("grow_accounts")
+                      .select("primary_contact_phone, company_name")
+                      .eq("id", order.account_id).maybeSingle();
+                    const phone = (acct as any)?.primary_contact_phone;
+                    if (!phone) { toast.error("Account has no primary contact phone"); return; }
+                    try {
+                      await sendSMS({ to: phone, message: `Order ${order.order_number} update: status ${order.status}. Total $${Number(order.total ?? 0).toFixed(2)}.` });
+                      toast.success("Confirmation SMS sent");
+                    } catch (err: any) { toast.error(err?.message ?? "SMS failed"); }
+                  }}>
+                    <MessageSquare className="w-3.5 h-3.5" /> Send Confirmation SMS
                   </DropdownMenuItem>
                 )}
                 {allocations.length > 0 && (

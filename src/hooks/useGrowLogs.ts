@@ -32,28 +32,42 @@ export interface GrowLogFilters {
   log_type?: string;
   dateFrom?: string;
   dateTo?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export function useGrowLogs(filters: GrowLogFilters = {}, limit: number = 100) {
   const { user } = useAuth();
   const { orgId } = useOrg();
   const [data, setData] = useState<GrowLog[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
 
-  const sig = [filters.area_id, filters.cycle_id, filters.plant_id, filters.log_type, filters.dateFrom, filters.dateTo, limit].join(":");
+  const sig = [filters.area_id, filters.cycle_id, filters.plant_id, filters.log_type, filters.dateFrom, filters.dateTo, filters.page ?? "", filters.pageSize ?? "", limit].join(":");
 
   useEffect(() => {
-    if (!user || !orgId) { setData([]); setLoading(false); return; }
+    if (!user || !orgId) { setData([]); setTotalCount(0); setLoading(false); return; }
     let cancelled = false;
     setLoading(true);
     (async () => {
-      let q = supabase.from("grow_logs").select("*").eq("org_id", orgId);
+      const paginated = filters.page != null && filters.pageSize != null;
+      let q = paginated
+        ? supabase.from("grow_logs").select("*", { count: "exact" }).eq("org_id", orgId)
+        : supabase.from("grow_logs").select("*").eq("org_id", orgId);
       if (filters.area_id) q = q.eq("area_id", filters.area_id);
       if (filters.cycle_id) q = q.eq("grow_cycle_id", filters.cycle_id);
       if (filters.plant_id) q = q.eq("plant_id", filters.plant_id);
       if (filters.log_type) q = q.eq("log_type", filters.log_type);
-      const { data: rows } = await q.order("recorded_at", { ascending: false, nullsFirst: false }).limit(limit);
+      q = q.order("recorded_at", { ascending: false, nullsFirst: false });
+      if (paginated) {
+        const from = (filters.page! - 1) * filters.pageSize!;
+        q = q.range(from, from + filters.pageSize! - 1);
+      } else {
+        q = q.limit(limit);
+      }
+      const { data: rows, count } = await q;
+      if (paginated) setTotalCount(count ?? 0);
       const areaIds = Array.from(new Set(((rows ?? []) as any[]).map((r) => r.area_id).filter(Boolean)));
       const cycleIds = Array.from(new Set(((rows ?? []) as any[]).map((r) => r.grow_cycle_id).filter(Boolean)));
       const userIds = Array.from(new Set(((rows ?? []) as any[]).map((r) => r.recorded_by).filter(Boolean)));
@@ -79,7 +93,7 @@ export function useGrowLogs(filters: GrowLogFilters = {}, limit: number = 100) {
   }, [user?.id, orgId, tick, sig]);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
-  return { data, loading, refresh };
+  return { data, loading, refresh, totalCount };
 }
 
 export function useCreateGrowLog() {

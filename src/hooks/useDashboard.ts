@@ -149,9 +149,20 @@ export function useRecentActivity(limit: number = 10) {
     let cancelled = false;
     setLoading(true);
     (async () => {
-      const { data: rows } = await supabase.from("grow_audit_log").select("*").eq("org_id", orgId).order("created_at", { ascending: false }).limit(limit);
+      // Prefer the pre-joined materialized view (enriched with user name + avatar,
+      // already filtered to the last 30 days and capped at 1000 rows). Falls back
+      // to the raw audit log if the view doesn't exist yet (older environments).
+      const matview = await supabase.from("grow_recent_activity" as any)
+        .select("*").eq("org_id", orgId)
+        .order("created_at", { ascending: false }).limit(limit);
       if (cancelled) return;
-      setData((rows ?? []) as any[]);
+      if (matview.error) {
+        const { data: rows } = await supabase.from("grow_audit_log").select("*").eq("org_id", orgId).order("created_at", { ascending: false }).limit(limit);
+        if (cancelled) return;
+        setData((rows ?? []) as any[]);
+      } else {
+        setData((matview.data ?? []) as any[]);
+      }
       setLoading(false);
     })();
     return () => { cancelled = true; };

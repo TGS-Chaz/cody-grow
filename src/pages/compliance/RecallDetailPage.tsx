@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
-  AlertOctagon, Loader2, ShieldCheck, CheckCircle2, Send, Activity, Mail, XCircle, Building2,
+  AlertOctagon, Loader2, ShieldCheck, CheckCircle2, Send, Activity, Mail, XCircle, Building2, MessageSquare,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -16,6 +16,8 @@ import CopyableId from "@/components/shared/CopyableId";
 import {
   useRecall, useAffectedOrders, useRecallNotifications, useSendRecallNotifications, useResolveRecall, useAcknowledgeNotification,
 } from "@/hooks/useRecalls";
+import { useSendSMS, useSMSEnabled } from "@/hooks/useSMS";
+import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
 const SEVERITY_COLORS: Record<string, { bg: string; text: string }> = {
@@ -38,6 +40,9 @@ export default function RecallDetailPage() {
   const sendNotifications = useSendRecallNotifications();
   const resolve = useResolveRecall();
   const ack = useAcknowledgeNotification();
+  const smsEnabled = useSMSEnabled();
+  const sendSMS = useSendSMS();
+  const [smsSending, setSmsSending] = useState(false);
 
   if (loading) return <div className="flex h-[60vh] items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>;
   if (!recall) return (
@@ -77,6 +82,28 @@ export default function RecallDetailPage() {
             <StatusPill label={recall.status ?? "open"} variant={recall.status === "resolved" ? "success" : recall.status === "in_progress" ? "warning" : "critical"} />
             {recall.status !== "resolved" && (
               <Button variant="outline" onClick={handleSendAll} disabled={affected.length === 0} className="gap-1.5"><Send className="w-3.5 h-3.5" /> Send Notifications ({affected.length})</Button>
+            )}
+            {recall.status !== "resolved" && smsEnabled && (
+              <Button variant="outline" disabled={affected.length === 0 || smsSending} onClick={async () => {
+                setSmsSending(true);
+                try {
+                  const accountIds = Array.from(new Set(affected.map((a: any) => a.account_id).filter(Boolean)));
+                  if (accountIds.length === 0) { toast.error("No affected accounts"); setSmsSending(false); return; }
+                  const { data: accounts } = await supabase.from("grow_accounts").select("company_name, primary_contact_phone").in("id", accountIds);
+                  let sent = 0;
+                  for (const a of (accounts ?? []) as any[]) {
+                    if (!a.primary_contact_phone) continue;
+                    try {
+                      await sendSMS({ to: a.primary_contact_phone, message: `RECALL ${recall.recall_number}: ${recall.reason ?? "Product recall"}. Stop selling affected product immediately and contact your rep.` });
+                      sent++;
+                    } catch { /* continue */ }
+                  }
+                  toast.success(`Recall SMS sent to ${sent} account${sent === 1 ? "" : "s"}`);
+                } catch (err: any) { toast.error(err?.message ?? "Failed"); }
+                finally { setSmsSending(false); }
+              }} className="gap-1.5">
+                {smsSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />} SMS All Affected
+              </Button>
             )}
             {recall.status !== "resolved" && <Button onClick={handleResolve} className="gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Resolve</Button>}
           </div>

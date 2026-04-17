@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 export default function PublicMenuPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { menu, items, loading, error } = usePublicMenu(slug);
+  const { menu, items, groups, loading, error } = usePublicMenu(slug);
   const submitInquiry = useSubmitInquiry();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
@@ -96,18 +96,54 @@ export default function PublicMenuPage() {
           Showing {filtered.length} of {items.length} available item{items.length === 1 ? "" : "s"}
         </div>
 
-        {/* Product grid */}
+        {/* Product grid — grouped by catalog group if the menu has any */}
         {filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-card p-16 text-center">
             <Package className="w-10 h-10 mx-auto text-muted-foreground/40 mb-3" />
             <h3 className="text-[14px] font-semibold">No products match</h3>
             <p className="text-[12px] text-muted-foreground mt-1">Try clearing filters or search terms.</p>
           </div>
-        ) : (
+        ) : (groups?.length ?? 0) === 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((b) => (
               <ProductCard key={b.id} batch={b} onRequest={() => setInquiryBatch(b)} />
             ))}
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {(groups ?? []).map((g) => {
+              const inGroup = filtered.filter((b) => b.marketplace_group_id === g.id);
+              if (inGroup.length === 0) return null;
+              return (
+                <section key={g.id}>
+                  <div className="mb-3">
+                    <h2 className="text-[18px] font-bold">{g.name}</h2>
+                    {g.description && <p className="text-[12px] text-muted-foreground">{g.description}</p>}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {inGroup.map((b) => (
+                      <ProductCard key={b.id} batch={b} onRequest={() => setInquiryBatch(b)} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+            {(() => {
+              const ungrouped = filtered.filter((b) => !b.marketplace_group_id);
+              if (ungrouped.length === 0) return null;
+              return (
+                <section>
+                  <div className="mb-3">
+                    <h2 className="text-[18px] font-bold">More</h2>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {ungrouped.map((b) => (
+                      <ProductCard key={b.id} batch={b} onRequest={() => setInquiryBatch(b)} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })()}
           </div>
         )}
 
@@ -132,16 +168,21 @@ export default function PublicMenuPage() {
 function ProductCard({ batch, onRequest }: { batch: MarketplaceBatch; onRequest: () => void }) {
   const thc = batch.potency?.thc_total_pct;
   const cbd = batch.potency?.cbd_total_pct;
+  // Prefer batch image → product image → strain photo → gradient fallback
+  const image = batch.image_url ?? batch.product?.image_url ?? batch.strain?.strain_photo_url ?? null;
   return (
-    <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-2 hover:border-primary/40 transition-colors">
-      <div className="flex items-start justify-between gap-2">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-          <Leaf className="w-4 h-4" />
-        </div>
+    <div className="rounded-xl border border-border bg-card overflow-hidden flex flex-col hover:border-primary/40 transition-colors">
+      <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-primary/10 via-primary/5 to-emerald-500/10 flex items-center justify-center">
+        {image ? (
+          <img src={image} alt={batch.product?.name ?? ""} className="w-full h-full object-cover" loading="lazy" />
+        ) : (
+          <Leaf className="w-10 h-10 text-primary/40" />
+        )}
         {batch.strain?.type && (
-          <span className="inline-flex items-center h-5 px-2 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-muted text-muted-foreground">{batch.strain.type}</span>
+          <span className="absolute top-2 right-2 inline-flex items-center h-5 px-2 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-black/60 text-white backdrop-blur-sm">{batch.strain.type}</span>
         )}
       </div>
+      <div className="p-4 flex flex-col gap-2 flex-1">
       <div>
         <h4 className="text-[14px] font-semibold leading-tight">{batch.product?.name ?? "—"}</h4>
         {batch.strain?.name && <p className="text-[12px] text-muted-foreground italic mt-0.5">{batch.strain.name}</p>}
@@ -165,6 +206,7 @@ function ProductCard({ batch, onRequest }: { batch: MarketplaceBatch; onRequest:
       <Button size="sm" onClick={onRequest} className="w-full gap-1.5">
         Request Order
       </Button>
+      </div>
     </div>
   );
 }

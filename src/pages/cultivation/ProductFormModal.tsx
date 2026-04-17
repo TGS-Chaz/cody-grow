@@ -398,6 +398,12 @@ export default function ProductFormModal({ open, onClose, onSave, editing }: Pro
                     {strains.map((s) => <option key={s.id} value={s.id}>{s.name}{s.type ? ` (${s.type})` : ""}</option>)}
                   </select>
                 </Field>
+                <Field label="Product image URL" helper="Shown on marketplace and public menu. Paste a CDN/storage URL.">
+                  <Input value={form.image_url ?? ""} onChange={(e) => set("image_url", e.target.value || null)} placeholder="https://…" className="font-mono" />
+                  {form.image_url && (
+                    <img src={form.image_url} alt="" className="mt-2 w-24 h-24 rounded-lg object-cover border border-border" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  )}
+                </Field>
               </Section>
 
               {/* Pricing */}

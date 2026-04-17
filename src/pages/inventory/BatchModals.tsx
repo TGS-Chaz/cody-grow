@@ -391,6 +391,7 @@ export function CreateBatchModal({ open, onClose, onSuccess }: CreateBatchModalP
   const [expirationDate, setExpirationDate] = useState("");
   const [packagedDate, setPackagedDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -406,7 +407,7 @@ export function CreateBatchModal({ open, onClose, onSuccess }: CreateBatchModalP
     setIsDoh(false); setIsTradeSample(false); setIsEmployeeSample(false); setIsNonCannabis(false);
     setIsPackToOrder(false); setUnitCost(""); setProcurementFarm(""); setProcurementLicense("");
     setExternalId(generateExternalId()); setExpirationDate(""); setPackagedDate("");
-    setNotes(""); setShowAdvanced(false);
+    setNotes(""); setImageUrl(""); setShowAdvanced(false);
     (async () => {
       const [pRes, sRes, aRes, hRes] = await Promise.all([
         supabase.from("grow_products").select("id, name, category, ccrs_inventory_category, strain_id, sku").eq("org_id", orgId).eq("is_active", true).order("name"),
@@ -464,7 +465,8 @@ export function CreateBatchModal({ open, onClose, onSuccess }: CreateBatchModalP
         expiration_date: expirationDate || null,
         packaged_date: packagedDate || null,
         notes: notes.trim() || null,
-      });
+        image_url: imageUrl.trim() || null,
+      } as any);
       toast.success(`Batch ${batch.barcode} created`);
       onSuccess?.(batch);
       onClose();
@@ -616,6 +618,13 @@ export function CreateBatchModal({ open, onClose, onSuccess }: CreateBatchModalP
 
               <Field label="Notes">
                 <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
+              </Field>
+
+              <Field label="Batch image URL" helper="Optional. Overrides the product image on the public marketplace.">
+                <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://…" className="font-mono" />
+                {imageUrl && (
+                  <img src={imageUrl} alt="" className="mt-2 w-24 h-24 rounded-lg object-cover border border-border" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                )}
               </Field>
             </motion.div>
           )}

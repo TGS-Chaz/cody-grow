@@ -228,6 +228,23 @@ export function AccountModal({ open, onClose, onSuccess, account }: {
                 </Field>
                 <Field label="Delivery window"><Input value={(form as any).preferred_delivery_window ?? ""} onChange={(e) => setField("preferred_delivery_window" as any, e.target.value as any)} placeholder="e.g. 9am-2pm" /></Field>
               </Section>
+
+              <Section title="Menu push">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={(form as any).menu_push_enabled ?? false}
+                    onChange={(e) => setField("menu_push_enabled" as any, e.target.checked as any)}
+                    className="w-4 h-4 mt-0.5 rounded border-border accent-primary"
+                  />
+                  <div>
+                    <span className="text-[12px] font-medium">Auto-push live inventory</span>
+                    <p className="text-[11px] text-muted-foreground">
+                      When enabled, this account automatically receives a refreshed JSON menu whenever your inventory changes. Stable signed URL will be stored on the account record.
+                    </p>
+                  </div>
+                </label>
+              </Section>
             </motion.div>
           )}
         </AnimatePresence>

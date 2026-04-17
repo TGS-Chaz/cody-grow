@@ -58,7 +58,7 @@ export function useGlobalSearch(query: string): GlobalSearchState {
       try {
         const [plantsRes, batchesRes, strainsRes, accountsRes, ordersRes, productsRes, cyclesRes, harvestsRes, employeesRes, manifestsRes] = await Promise.all([
           supabase.from("grow_plants").select("id, plant_identifier").eq("org_id", orgId).ilike("plant_identifier", like).limit(PER_ENTITY_LIMIT).abortSignal(ctrl.signal),
-          supabase.from("grow_batches").select("id, barcode, external_id").eq("org_id", orgId).or(`barcode.ilike.${like},external_id.ilike.${like}`).limit(PER_ENTITY_LIMIT).abortSignal(ctrl.signal),
+          supabase.from("grow_batches").select("id, barcode, external_id, area_id, current_quantity, qa_status").eq("org_id", orgId).or(`barcode.ilike.${like},external_id.ilike.${like}`).limit(PER_ENTITY_LIMIT).abortSignal(ctrl.signal),
           supabase.from("grow_strains").select("id, name, type").eq("org_id", orgId).ilike("name", like).limit(PER_ENTITY_LIMIT).abortSignal(ctrl.signal),
           supabase.from("grow_accounts").select("id, company_name, license_number").eq("org_id", orgId).or(`company_name.ilike.${like},license_number.ilike.${like}`).limit(PER_ENTITY_LIMIT).abortSignal(ctrl.signal),
           supabase.from("grow_orders").select("id, order_number, total, status").eq("org_id", orgId).ilike("order_number", like).limit(PER_ENTITY_LIMIT).abortSignal(ctrl.signal),
@@ -71,10 +71,24 @@ export function useGlobalSearch(query: string): GlobalSearchState {
 
         if (ctrl.signal.aborted) return;
 
+        // Enrich batch results with area name (location) so the ⌘K result
+        // doubles as an inventory locator: "BDR-... · Flower Room 1 · 320g · passed"
+        const batchRows = ((batchesRes.data ?? []) as any[]);
+        const areaIds = Array.from(new Set(batchRows.map((b) => b.area_id).filter(Boolean)));
+        const { data: areas } = areaIds.length > 0
+          ? await supabase.from("grow_areas").select("id, name").in("id", areaIds)
+          : { data: [] };
+        const areaById = new Map<string, any>(((areas ?? []) as any[]).map((a) => [a.id, a]));
+
         const results: SearchResult[] = [];
         const byEntity: GlobalSearchState["byEntity"] = {
           plant: ((plantsRes.data ?? []) as any[]).map((r) => ({ id: r.id, entity: "plant", label: r.plant_identifier ?? r.id.slice(0, 8), href: `/cultivation/plants/${r.id}` })),
-          batch: ((batchesRes.data ?? []) as any[]).map((r) => ({ id: r.id, entity: "batch", label: r.barcode, sublabel: r.external_id, href: `/inventory/batches/${r.id}` })),
+          batch: batchRows.map((r) => {
+            const areaName = r.area_id ? areaById.get(r.area_id)?.name : null;
+            const qty = Number(r.current_quantity ?? 0);
+            const subs = [areaName, `${qty.toFixed(0)} on hand`, r.qa_status].filter(Boolean).join(" · ");
+            return { id: r.id, entity: "batch" as const, label: r.barcode, sublabel: subs || r.external_id, href: `/inventory/batches/${r.id}` };
+          }),
           strain: ((strainsRes.data ?? []) as any[]).map((r) => ({ id: r.id, entity: "strain", label: r.name, sublabel: r.type, href: `/cultivation/strains/${r.id}` })),
           account: ((accountsRes.data ?? []) as any[]).map((r) => ({ id: r.id, entity: "account", label: r.company_name, sublabel: r.license_number, href: `/sales/accounts/${r.id}` })),
           order: ((ordersRes.data ?? []) as any[]).map((r) => ({ id: r.id, entity: "order", label: r.order_number, sublabel: r.status, href: `/sales/orders/${r.id}` })),

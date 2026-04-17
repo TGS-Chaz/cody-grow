@@ -50,50 +50,55 @@ import CodyContextProvider from "@/components/cody/CodyContextProvider";
 import CommandBar from "@/components/shared/CommandBar";
 import NotificationBell from "@/components/shared/NotificationBell";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
+import { useUserPermissions } from "@/hooks/usePermissionCheck";
 
-const navGroups = [
+interface NavItem { to: string; icon: any; label: string; required?: string[] }
+interface NavGroup { label: string; items: NavItem[]; required?: string[] }
+
+const navGroups: NavGroup[] = [
   { label: "Overview", items: [
+    // Dashboard is always visible
     { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   ]},
-  { label: "Cultivation", items: [
-    { to: "/cultivation/board", icon: LayoutGrid, label: "Grow Board" },
-    { to: "/cultivation/strains", icon: Dna, label: "Strains" },
-    { to: "/cultivation/areas", icon: MapPin, label: "Areas" },
-    { to: "/cultivation/products", icon: Package, label: "Products" },
-    { to: "/cultivation/sources", icon: Sprout, label: "Grow Sources" },
-    { to: "/cultivation/plants", icon: Leaf, label: "Plants" },
-    { to: "/cultivation/grow-cycles", icon: CalendarDays, label: "Grow Cycles" },
-    { to: "/cultivation/harvests", icon: Scissors, label: "Harvests" },
+  { label: "Cultivation", required: ["view_plants", "view_grow_board", "view_strains", "view_cycles", "view_harvests"], items: [
+    { to: "/cultivation/board", icon: LayoutGrid, label: "Grow Board", required: ["view_grow_board"] },
+    { to: "/cultivation/strains", icon: Dna, label: "Strains", required: ["view_strains"] },
+    { to: "/cultivation/areas", icon: MapPin, label: "Areas", required: ["view_areas"] },
+    { to: "/cultivation/products", icon: Package, label: "Products", required: ["view_products"] },
+    { to: "/cultivation/sources", icon: Sprout, label: "Grow Sources", required: ["view_sources"] },
+    { to: "/cultivation/plants", icon: Leaf, label: "Plants", required: ["view_plants"] },
+    { to: "/cultivation/grow-cycles", icon: CalendarDays, label: "Grow Cycles", required: ["view_cycles"] },
+    { to: "/cultivation/harvests", icon: Scissors, label: "Harvests", required: ["view_harvests"] },
   ]},
-  { label: "Operations", items: [
-    { to: "/operations/tasks", icon: ClipboardList, label: "Tasks" },
-    { to: "/operations/logs", icon: BookOpen, label: "Grow Logs" },
-    { to: "/operations/environment", icon: Thermometer, label: "Environment" },
+  { label: "Operations", required: ["view_tasks", "view_grow_logs", "view_environment"], items: [
+    { to: "/operations/tasks", icon: ClipboardList, label: "Tasks", required: ["view_tasks"] },
+    { to: "/operations/logs", icon: BookOpen, label: "Grow Logs", required: ["view_grow_logs"] },
+    { to: "/operations/environment", icon: Thermometer, label: "Environment", required: ["view_environment"] },
   ]},
-  { label: "Inventory", items: [
-    { to: "/inventory/batches", icon: Barcode, label: "Batches" },
-    { to: "/inventory/qa", icon: FlaskConical, label: "QA & Lab Testing" },
-    { to: "/inventory/production", icon: Factory, label: "Production" },
-    { to: "/inventory/supplies", icon: Boxes, label: "Supplies" },
+  { label: "Inventory", required: ["view_batches", "view_qa", "view_production"], items: [
+    { to: "/inventory/batches", icon: Barcode, label: "Batches", required: ["view_batches"] },
+    { to: "/inventory/qa", icon: FlaskConical, label: "QA & Lab Testing", required: ["view_qa"] },
+    { to: "/inventory/production", icon: Factory, label: "Production", required: ["view_production"] },
+    { to: "/inventory/supplies", icon: Boxes, label: "Supplies", required: ["view_batches"] },
   ]},
-  { label: "Sales & Fulfillment", items: [
-    { to: "/sales/accounts", icon: Building2, label: "Accounts" },
-    { to: "/sales/orders", icon: ShoppingCart, label: "Orders" },
-    { to: "/sales/manifests", icon: FileText, label: "Manifests" },
-    { to: "/sales/transfers", icon: Truck, label: "Inbound Transfers" },
-    { to: "/marketplace", icon: Store, label: "Marketplace" },
+  { label: "Sales & Fulfillment", required: ["view_accounts", "create_order", "view_orders", "view_manifests"], items: [
+    { to: "/sales/accounts", icon: Building2, label: "Accounts", required: ["view_accounts"] },
+    { to: "/sales/orders", icon: ShoppingCart, label: "Orders", required: ["view_orders", "create_order"] },
+    { to: "/sales/manifests", icon: FileText, label: "Manifests", required: ["view_manifests"] },
+    { to: "/sales/transfers", icon: Truck, label: "Inbound Transfers", required: ["view_manifests"] },
+    { to: "/marketplace", icon: Store, label: "Marketplace", required: ["view_accounts"] },
   ]},
   { label: "Reports", items: [
     { to: "/reports", icon: BarChart3, label: "Reports" },
   ]},
-  { label: "Compliance", items: [
-    { to: "/compliance/ccrs", icon: ShieldCheck, label: "CCRS Dashboard" },
-    { to: "/compliance/audit", icon: ScrollText, label: "Audit Log" },
-    { to: "/compliance/recalls", icon: AlertOctagon, label: "Recalls" },
-    { to: "/compliance/disposals", icon: Trash2, label: "Disposals" },
-    { to: "/compliance/labels", icon: Tag, label: "Labels" },
+  { label: "Compliance", required: ["view_audit_log", "upload_to_ccrs", "view_recalls", "view_disposals", "view_labels"], items: [
+    { to: "/compliance/ccrs", icon: ShieldCheck, label: "CCRS Dashboard", required: ["upload_to_ccrs", "view_audit_log"] },
+    { to: "/compliance/audit", icon: ScrollText, label: "Audit Log", required: ["view_audit_log"] },
+    { to: "/compliance/recalls", icon: AlertOctagon, label: "Recalls", required: ["view_recalls"] },
+    { to: "/compliance/disposals", icon: Trash2, label: "Disposals", required: ["view_disposals"] },
+    { to: "/compliance/labels", icon: Tag, label: "Labels", required: ["view_labels"] },
   ]},
-  { label: "Settings", items: [
+  { label: "Settings", required: ["manage_settings", "manage_users", "manage_employees", "manage_facilities", "manage_equipment", "manage_fleet", "manage_integrations"], items: [
     { to: "/settings", icon: Settings, label: "Configuration" },
   ]},
 ];
@@ -107,6 +112,16 @@ export default function AppLayout() {
   const { profile } = useProfile();
   const { preference, toggle: toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
+  const { keys: permKeys, isOwner, loading: permsLoading } = useUserPermissions();
+
+  // Filter navGroups based on permissions. Owners + loading state see everything.
+  // A group is shown if ANY of its required keys is granted, or if it has no required.
+  const visibleGroups = (permsLoading || isOwner) ? navGroups : navGroups.map((g) => {
+    const items = g.items.filter((it) => !it.required || it.required.some((k) => permKeys.has(k)));
+    if (items.length === 0) return null;
+    if (g.required && !g.required.some((k) => permKeys.has(k)) && items.length === 0) return null;
+    return { ...g, items };
+  }).filter(Boolean) as NavGroup[];
 
   const handleSignOut = async () => {
     await signOut();
@@ -147,7 +162,7 @@ export default function AppLayout() {
         {/* Nav — grouped, scrolls when content exceeds viewport (full sidebar is long) */}
         <nav className="flex-1 min-h-0 px-2 pt-2 pb-2 overflow-y-auto space-y-1">
           <LayoutGroup>
-            {navGroups.map((group) => (
+            {visibleGroups.map((group) => (
               <div key={group.label}>
                 {!collapsed && (
                   <div className="px-3 pt-3 pb-1">
@@ -334,7 +349,7 @@ export default function AppLayout() {
             borderTop: '1px solid var(--glass-border)',
           }}
         >
-          {navItems.slice(0, 5).map((item) => {
+          {visibleGroups.flatMap((g) => g.items).slice(0, 5).map((item) => {
             const isActive =
               location.pathname === item.to ||
               (item.to !== "/dashboard" && location.pathname.startsWith(item.to));

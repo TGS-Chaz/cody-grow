@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   FileText, Loader2, Download, Copy, Printer, Send, Archive, MoreHorizontal, Truck, Building2,
-  CalendarDays, User, Activity, ShieldCheck, Package, XCircle, RotateCcw,
+  CalendarDays, User, Activity, ShieldCheck, Package, XCircle, RotateCcw, MessageSquare,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -26,6 +26,7 @@ import { useProfile } from "@/lib/profile";
 import { generateManifestCSV, generateManifestCSVFilename } from "@/lib/ccrs/generateManifestCSV";
 import { ProcessReturnModal } from "./ProcessReturnModal";
 import { generateWCIAJSON } from "@/lib/ccrs/generateWCIAJSON";
+import { useSendSMS, useSMSEnabled } from "@/hooks/useSMS";
 import { cn } from "@/lib/utils";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "critical" | "info" | "muted"> = {
@@ -49,6 +50,9 @@ export default function ManifestDetailPage() {
   const update = useUpdateManifest();
   const cancel = useCancelManifest();
   const [returnOpen, setReturnOpen] = useState(false);
+  const smsEnabled = useSMSEnabled();
+  const sendSMS = useSendSMS();
+  const [smsSending, setSmsSending] = useState(false);
   const { profile } = useProfile();
 
   useEffect(() => {
@@ -181,6 +185,22 @@ export default function ManifestDetailPage() {
     })),
   }), [manifest, items]);
 
+  const sendDeliverySMS = async () => {
+    const to = manifest.destination_phone;
+    if (!to) { toast.error("Destination phone not set on this manifest"); return; }
+    const driverName = manifest.driver ? `${manifest.driver.first_name ?? ""} ${manifest.driver.last_name ?? ""}`.trim() : manifest.driver_name;
+    const plate = manifest.vehicle?.license_plate ?? manifest.vehicle_license_plate ?? "—";
+    const eta = manifest.departure_datetime ? new Date(manifest.departure_datetime).toLocaleString() : "TBD";
+    const orderNo = manifest.order?.order_number ?? manifest.external_id.slice(-6);
+    const message = `Your order ${orderNo} is on its way. ETA: ${eta}. Driver: ${driverName ?? "—"}, Vehicle: ${plate}.`;
+    setSmsSending(true);
+    try {
+      await sendSMS({ to, message });
+      toast.success(`SMS sent to ${to}`);
+    } catch (err: any) { toast.error(err?.message ?? "SMS failed"); }
+    finally { setSmsSending(false); }
+  };
+
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
       <PageHeader
@@ -209,6 +229,11 @@ export default function ManifestDetailPage() {
                 <DropdownMenuItem onClick={async () => { try { await update(manifest.id, { ccrs_submitted_at: new Date().toISOString(), status: "uploaded_to_ccrs" } as any); toast.success("Marked uploaded"); refresh(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } }}>
                   <ShieldCheck className="w-3.5 h-3.5" /> Mark CCRS Uploaded (stub)
                 </DropdownMenuItem>
+                {smsEnabled && (manifest.status === "in_transit" || manifest.status === "generated" || manifest.status === "uploaded_to_ccrs") && (
+                  <DropdownMenuItem onClick={sendDeliverySMS} disabled={smsSending}>
+                    <MessageSquare className="w-3.5 h-3.5" /> Send Delivery SMS
+                  </DropdownMenuItem>
+                )}
                 {manifest.manifest_type === "outbound" && manifest.status === "accepted" && (
                   <DropdownMenuItem onClick={() => setReturnOpen(true)}>
                     <RotateCcw className="w-3.5 h-3.5" /> Process Return

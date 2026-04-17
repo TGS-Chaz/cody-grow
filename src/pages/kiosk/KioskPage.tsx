@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Clock, Leaf, Scale, ClipboardList, BookOpen, Trash2, Barcode, LogOut, X, Delete,
-  ArrowLeft, CheckCircle2, Loader2, Camera,
+  ArrowLeft, CheckCircle2, Loader2, Camera, MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -330,6 +330,15 @@ function BatchScanScreen() {
       {result && (
         <div className="rounded-2xl border-2 border-primary/30 bg-primary/5 p-6 space-y-3">
           <div className="font-mono text-[20px] font-bold">{result.barcode}</div>
+          {result.area?.name && (
+            <div className="flex items-center gap-2 rounded-xl bg-primary/10 border border-primary/30 px-4 py-3">
+              <MapPin className="w-5 h-5 text-primary" />
+              <div className="flex-1">
+                <div className="text-[10px] uppercase tracking-wider text-primary/80 font-semibold">Location</div>
+                <div className="text-[18px] font-bold">{result.area.name}</div>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3 text-[13px]">
             <div><span className="text-muted-foreground">Product:</span> <span className="font-semibold">{result.product?.name ?? "—"}</span></div>
             <div><span className="text-muted-foreground">Strain:</span> <span className="font-semibold">{result.strain?.name ?? "—"}</span></div>

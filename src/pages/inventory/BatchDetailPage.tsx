@@ -31,6 +31,8 @@ import { CCRS_INVENTORY_CATEGORY_LABELS, CCRS_INVENTORY_CATEGORY_COLORS, CcrsInv
 import { SublotModal, AdjustInventoryModal, ReturnToParentModal } from "./BatchModals";
 import { AddResultsModal } from "./QAModals";
 import COAExtractor, { COAExtraction } from "@/components/ai/COAExtractor";
+import MarketPricingCard from "@/components/ai/MarketPricingCard";
+import { useMarketPrice } from "@/hooks/usePricingIntel";
 import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -426,6 +428,7 @@ function OverviewPanel({ batch, ageDays }: { batch: Batch; ageDays: number | nul
       </div>
 
       <div className="space-y-4">
+        <BatchPricingCard batch={batch} />
         <CodyInsightsPanel entity_type="batch" entity_id={batch.id} />
         <div className="rounded-xl border border-border bg-card p-4 space-y-2 text-[12px]">
           <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Notes</h3>
@@ -547,6 +550,15 @@ function PotencyStat({ label, value, color }: { label: string; value: number | n
       </div>
     </div>
   );
+}
+
+function BatchPricingCard({ batch }: { batch: Batch }) {
+  const pricing = useMarketPrice(
+    (batch as any).ccrs_inventory_category ?? batch.product?.category,
+    batch.strain?.name,
+    batch.unit_cost != null ? Number(batch.unit_cost) : null,
+  );
+  return <MarketPricingCard data={pricing} categoryLabel={(batch as any).ccrs_inventory_category ?? batch.product?.category} strainName={batch.strain?.name} />;
 }
 
 // ─── Sublots ────────────────────────────────────────────────────────────────

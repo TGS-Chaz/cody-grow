@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { useCodyContext } from "@/hooks/useCodyContext";
 import { useOrgSettings, IntegrationConfig } from "@/hooks/useOrgSettings";
 import { useProductAccess } from "@/hooks/useProductAccess";
+import { useOrg } from "@/lib/org";
+import { callEdgeFunction } from "@/lib/edge-function";
+import { toast } from "sonner";
 import IntegrationConfigModal, {
   IntegrationDefinition, IntegrationField,
 } from "./IntegrationConfigModal";
@@ -25,17 +28,15 @@ const INTEGRATIONS: IntegrationDefinition[] = [
     description: "Sync invoices, payments, and COGS data",
     icon: Calculator,
     accentClass: "bg-emerald-500/15 text-emerald-500",
-    comingSoon: true,
     fields: [
-      { key: "realm_id", label: "QuickBooks Company ID (Realm)", type: "text", mono: true, placeholder: "9130348...", helper: "Set automatically after OAuth connect" },
+      { key: "sync_customers", label: "Sync customers", type: "toggle", helper: "Push grow_accounts → QBO customers" },
+      { key: "sync_invoices", label: "Sync invoices", type: "toggle", helper: "Push grow_invoices → QBO invoices" },
+      { key: "sync_payments", label: "Sync payments", type: "toggle", helper: "Push grow_payments → QBO payments" },
       { key: "sync_frequency", label: "Sync Frequency", type: "select", options: [
-        { value: "realtime", label: "Real-time (webhook)" },
-        { value: "hourly", label: "Hourly" },
-        { value: "daily", label: "Daily" },
         { value: "manual", label: "Manual" },
+        { value: "daily", label: "Daily" },
+        { value: "weekly", label: "Weekly" },
       ] },
-      { key: "default_income_account", label: "Default Income Account", type: "text", helper: "Account to map Cody Grow sales to" },
-      { key: "default_cogs_account", label: "Default COGS Account", type: "text" },
     ],
   },
   {
@@ -76,11 +77,11 @@ const INTEGRATIONS: IntegrationDefinition[] = [
     description: "Send SMS alerts, delivery notifications, and recall notices",
     icon: MessageSquare,
     accentClass: "bg-red-500/15 text-red-500",
-    comingSoon: true,
     fields: [
       { key: "account_sid", label: "Account SID", type: "text", mono: true, placeholder: "AC..." },
       { key: "auth_token", label: "Auth Token", type: "password" },
       { key: "from_number", label: "From Number", type: "text", mono: true, placeholder: "+15095551234", helper: "Must be a Twilio-verified number" },
+      { key: "test_to", label: "Test To", type: "text", mono: true, placeholder: "+15095550000", helper: "Click Test SMS below to send a test message here" },
     ],
   },
   {
@@ -330,8 +331,143 @@ export default function IntegrationsPage() {
           integration={activeIntegration}
           initialConfig={integrations[activeIntegration.key]}
           onSave={(patch) => handleSave(activeIntegration.key, patch)}
+          customPanel={
+            activeIntegration.key === "quickbooks" ? <QuickBooksPanel config={integrations.quickbooks} onRefresh={() => { /* settings auto-refresh via hook */ }} /> :
+            activeIntegration.key === "twilio" ? <TwilioPanel config={integrations.twilio} /> :
+            null
+          }
         />
       )}
+    </div>
+  );
+}
+
+// ─── QuickBooks connect / sync / disconnect panel ──────────────────────────
+function QuickBooksPanel({ config, onRefresh }: { config?: IntegrationConfig; onRefresh: () => void }) {
+  const { orgId } = useOrg();
+  const connected = !!config?.connected;
+  const companyName = (config?.config as any)?.company_name;
+  const lastSync = (config?.config as any)?.last_sync_at;
+  const lastResult = (config?.config as any)?.last_sync_result;
+  const [busy, setBusy] = useState<"connect" | "sync" | "disconnect" | null>(null);
+
+  const handleConnect = async () => {
+    if (!orgId) return;
+    setBusy("connect");
+    try {
+      const res = await callEdgeFunction<{ auth_url: string }>("quickbooks-auth", { action: "authorize_url", org_id: orgId });
+      const w = window.open(res.auth_url, "qbo_auth", "width=720,height=820");
+      if (!w) { toast.error("Popup blocked — enable popups and retry"); return; }
+      const listener = (ev: MessageEvent) => {
+        if (ev.data?.type === "qbo_success") {
+          toast.success("QuickBooks connected");
+          window.removeEventListener("message", listener);
+          onRefresh();
+          setTimeout(() => window.location.reload(), 500);
+        } else if (ev.data?.type === "qbo_error") {
+          toast.error(ev.data.message ?? "QBO connect failed");
+          window.removeEventListener("message", listener);
+        }
+      };
+      window.addEventListener("message", listener);
+    } catch (err: any) { toast.error(err?.message ?? "Failed"); }
+    finally { setBusy(null); }
+  };
+
+  const handleSync = async () => {
+    if (!orgId) return;
+    setBusy("sync");
+    try {
+      const res = await callEdgeFunction<{ ok: boolean; counts: any; errors: string[] }>("quickbooks-sync", { org_id: orgId, sync_type: "all" }, 120_000);
+      const { counts, errors } = res;
+      toast.success(`Synced ${counts.customers} customers, ${counts.invoices} invoices, ${counts.payments} payments${errors.length ? ` · ${errors.length} error${errors.length === 1 ? "" : "s"}` : ""}`);
+      if (errors.length > 0) console.warn("QBO sync errors:", errors);
+      onRefresh();
+      setTimeout(() => window.location.reload(), 500);
+    } catch (err: any) { toast.error(err?.message ?? "Sync failed"); }
+    finally { setBusy(null); }
+  };
+
+  const handleDisconnect = async () => {
+    if (!orgId) return;
+    if (!window.confirm("Disconnect QuickBooks? Tokens will be cleared — you'll need to re-authorize.")) return;
+    setBusy("disconnect");
+    try {
+      await callEdgeFunction("quickbooks-auth", { action: "disconnect", org_id: orgId });
+      toast.success("QuickBooks disconnected");
+      onRefresh();
+      setTimeout(() => window.location.reload(), 500);
+    } catch (err: any) { toast.error(err?.message ?? "Failed"); }
+    finally { setBusy(null); }
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-[13px] font-semibold">{connected ? `Connected${companyName ? ` · ${companyName}` : ""}` : "Not connected"}</p>
+          <p className="text-[11px] text-muted-foreground">
+            {connected
+              ? (lastSync ? `Last synced ${new Date(lastSync).toLocaleString()}${lastResult ? ` (${lastResult.counts?.customers ?? 0}c / ${lastResult.counts?.invoices ?? 0}i / ${lastResult.counts?.payments ?? 0}p)` : ""}` : "Not synced yet")
+              : "Connect to sync customers, invoices, and payments."}
+          </p>
+        </div>
+        {connected ? (
+          <div className="flex items-center gap-1.5">
+            <Button size="sm" onClick={handleSync} disabled={busy !== null} className="gap-1.5">
+              {busy === "sync" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <TrendingUp className="w-3.5 h-3.5" />}
+              Sync Now
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleDisconnect} disabled={busy !== null}>
+              Disconnect
+            </Button>
+          </div>
+        ) : (
+          <Button size="sm" onClick={handleConnect} disabled={busy !== null} className="gap-1.5">
+            {busy === "connect" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            Connect
+          </Button>
+        )}
+      </div>
+      {!connected && (
+        <p className="text-[10px] text-muted-foreground italic">
+          Requires QBO_CLIENT_ID, QBO_CLIENT_SECRET, QBO_REDIRECT_URI server-side.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── Twilio test-sms panel ─────────────────────────────────────────────────
+function TwilioPanel({ config }: { config?: IntegrationConfig }) {
+  const { orgId } = useOrg();
+  const connected = !!config?.connected;
+  const testTo = (config?.config as any)?.test_to;
+  const [busy, setBusy] = useState(false);
+
+  const handleTest = async () => {
+    if (!orgId) return;
+    if (!testTo) { toast.error("Set a Test To number below first"); return; }
+    setBusy(true);
+    try {
+      await callEdgeFunction("send-sms", { org_id: orgId, to: testTo, message: "Cody Grow test SMS — your Twilio integration is working." });
+      toast.success(`Test SMS sent to ${testTo}`);
+    } catch (err: any) { toast.error(err?.message ?? "Test failed"); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 flex items-center justify-between">
+      <div>
+        <p className="text-[13px] font-semibold">{connected ? "Connected" : "Not connected"}</p>
+        <p className="text-[11px] text-muted-foreground">
+          {connected ? "Send a test message to verify." : "Fill in Account SID / Auth Token / From Number below to enable SMS."}
+        </p>
+      </div>
+      <Button size="sm" variant="outline" onClick={handleTest} disabled={busy || !testTo} className="gap-1.5">
+        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
+        Test SMS
+      </Button>
     </div>
   );
 }

@@ -137,6 +137,49 @@ export interface CreateTaskInput {
   blocking_tasks?: string[];
 }
 
+/** Insert an in-app notification for the assignee when a task has one. */
+async function notifyAssignment(orgId: string, task: Task) {
+  if (!task.assigned_to_user_id) return;
+  // Avoid duplicates: look for an existing assignment notification for this task
+  const { data: existing } = await supabase
+    .from("grow_in_app_notifications")
+    .select("id")
+    .eq("user_id", task.assigned_to_user_id)
+    .eq("entity_type", "task")
+    .eq("entity_id", task.id)
+    .eq("event_key", "task_assigned")
+    .maybeSingle();
+  if (existing) return;
+  const dueBit = task.scheduled_end ? ` Due ${new Date(task.scheduled_end).toLocaleString()}.` : "";
+  await supabase.from("grow_in_app_notifications").insert({
+    org_id: orgId,
+    user_id: task.assigned_to_user_id,
+    event_key: "task_assigned",
+    title: `New task: ${task.title}`,
+    content: `Priority: ${task.priority ?? "medium"}.${dueBit}`,
+    action_url: "/operations/tasks",
+    entity_type: "task",
+    entity_id: task.id,
+  });
+
+  // Urgent tasks also trigger SMS (best-effort; silent failure)
+  if (task.priority === "urgent") {
+    try {
+      const { data: member } = await supabase
+        .from("organization_members")
+        .select("phone")
+        .eq("id", task.assigned_to_user_id)
+        .maybeSingle();
+      const phone = (member as any)?.phone;
+      if (phone) {
+        await supabase.functions.invoke("send-sms", {
+          body: { org_id: orgId, to: phone, message: `URGENT task: ${task.title}.${dueBit}` },
+        });
+      }
+    } catch { /* SMS is best-effort */ }
+  }
+}
+
 export function useCreateTask() {
   const { user } = useAuth();
   const { orgId } = useOrg();
@@ -150,15 +193,22 @@ export function useCreateTask() {
       created_by: user?.id ?? null,
     }).select("*").single();
     if (error) throw error;
-    return data as unknown as Task;
+    const task = data as unknown as Task;
+    await notifyAssignment(orgId, task);
+    return task;
   }, [orgId, user?.id]);
 }
 
 export function useUpdateTask() {
+  const { orgId } = useOrg();
   return useCallback(async (id: string, patch: Partial<Task>) => {
-    const { error } = await supabase.from("grow_tasks").update(patch as any).eq("id", id);
+    const { data, error } = await supabase.from("grow_tasks").update(patch as any).eq("id", id).select("*").single();
     if (error) throw error;
-  }, []);
+    // If this update sets/changes the assignee, notify them
+    if (orgId && (patch as any).assigned_to_user_id) {
+      await notifyAssignment(orgId, data as unknown as Task);
+    }
+  }, [orgId]);
 }
 
 export function useCompleteTask() {

@@ -25,32 +25,46 @@ export interface AuditLogFilters {
   action?: string;
   dateFrom?: string;
   dateTo?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export function useAuditLog(filters: AuditLogFilters = {}, limit: number = 100) {
   const { user } = useAuth();
   const { orgId } = useOrg();
   const [data, setData] = useState<AuditLogEntry[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
 
-  const sig = [filters.user_id, filters.entity_type, filters.entity_id, filters.action, filters.dateFrom, filters.dateTo, limit].join(":");
+  const sig = [filters.user_id, filters.entity_type, filters.entity_id, filters.action, filters.dateFrom, filters.dateTo, filters.page ?? "", filters.pageSize ?? "", limit].join(":");
 
   useEffect(() => {
-    if (!user || !orgId) { setData([]); setLoading(false); return; }
+    if (!user || !orgId) { setData([]); setTotalCount(0); setLoading(false); return; }
     let cancelled = false;
     setLoading(true);
     (async () => {
-      let q = supabase.from("grow_audit_log").select("*").eq("org_id", orgId);
+      const paginated = filters.page != null && filters.pageSize != null;
+      let q = paginated
+        ? supabase.from("grow_audit_log").select("*", { count: "exact" }).eq("org_id", orgId)
+        : supabase.from("grow_audit_log").select("*").eq("org_id", orgId);
       if (filters.user_id) q = q.eq("user_id", filters.user_id);
       if (filters.entity_type) q = q.eq("entity_type", filters.entity_type);
       if (filters.entity_id) q = q.eq("entity_id", filters.entity_id);
       if (filters.action) q = q.eq("action", filters.action);
       if (filters.dateFrom) q = q.gte("created_at", filters.dateFrom);
       if (filters.dateTo) q = q.lte("created_at", filters.dateTo);
-      const { data: rows } = await q.order("created_at", { ascending: false }).limit(limit);
+      q = q.order("created_at", { ascending: false });
+      if (paginated) {
+        const from = (filters.page! - 1) * filters.pageSize!;
+        q = q.range(from, from + filters.pageSize! - 1);
+      } else {
+        q = q.limit(limit);
+      }
+      const { data: rows, count } = await q;
       if (cancelled) return;
       setData((rows ?? []) as AuditLogEntry[]);
+      if (paginated) setTotalCount(count ?? 0);
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -58,7 +72,7 @@ export function useAuditLog(filters: AuditLogFilters = {}, limit: number = 100) 
   }, [user?.id, orgId, tick, sig]);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
-  return { data, loading, refresh };
+  return { data, loading, refresh, totalCount };
 }
 
 export function useAuditLogStats(entries: AuditLogEntry[]) {
