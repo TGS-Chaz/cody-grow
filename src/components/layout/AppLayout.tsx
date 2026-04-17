@@ -144,8 +144,8 @@ export default function AppLayout() {
           )}
         </div>
 
-        {/* Nav — grouped */}
-        <nav className="flex-1 px-2 pt-2 overflow-y-auto space-y-1 scrollbar-hide">
+        {/* Nav — grouped, scrolls when content exceeds viewport (full sidebar is long) */}
+        <nav className="flex-1 min-h-0 px-2 pt-2 pb-2 overflow-y-auto space-y-1">
           <LayoutGroup>
             {navGroups.map((group) => (
               <div key={group.label}>

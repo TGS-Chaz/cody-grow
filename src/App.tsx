@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider } from "@/lib/theme";
@@ -102,6 +102,8 @@ export default function App() {
                 {/* Protected routes */}
                 <Route element={<ProtectedRoute />}>
                   <Route element={<AppLayout />}>
+                    {/* Root → dashboard for authenticated users */}
+                    <Route index element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/profile" element={<ProfilePage />} />
 
