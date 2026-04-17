@@ -92,7 +92,7 @@ export default function Dashboard() {
           ) : (
             <ul className="space-y-1">
               {harvests.map((h) => {
-                const days = h.expected_harvest_date ? Math.ceil((new Date(h.expected_harvest_date).getTime() - Date.now()) / 86400000) : null;
+                const days = h.target_harvest_date ? Math.ceil((new Date(h.target_harvest_date).getTime() - Date.now()) / 86400000) : null;
                 return (
                   <li key={h.id} className="flex items-center gap-3 py-1.5 border-b border-border/50 last:border-0">
                     <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center text-[11px] font-bold font-mono">

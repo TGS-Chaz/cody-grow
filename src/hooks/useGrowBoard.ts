@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { subscribeToChanges } from "@/lib/realtime";
 import { useAuth } from "@/lib/auth";
 import { useOrg } from "@/lib/org";
 import { generateExternalId } from "@/lib/ccrs-id";
@@ -287,18 +288,14 @@ export function useGrowBoard() {
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
-  // Realtime: any change to grow_board_cards for this org triggers a refetch
+  // Realtime: any change to grow_board_cards for this org triggers a refetch.
+  // Wrapped so a Realtime failure never crashes the Grow Board.
   useEffect(() => {
     if (!orgId) return;
-    const channel = supabase
-      .channel(`board-cards:${orgId}`)
-      .on(
-        "postgres_changes" as any,
-        { event: "*", schema: "public", table: "grow_board_cards", filter: `org_id=eq.${orgId}` },
-        () => setTick((t) => t + 1),
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const sub = subscribeToChanges(`board-cards:${orgId}`, [
+      { table: "grow_board_cards", filter: `org_id=eq.${orgId}`, callback: () => setTick((t) => t + 1) },
+    ]);
+    return () => sub.unsubscribe();
   }, [orgId]);
 
   return { data, loading, error, refresh };

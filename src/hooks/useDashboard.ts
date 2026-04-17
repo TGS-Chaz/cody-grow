@@ -31,7 +31,7 @@ export function useDashboardStats() {
       const [plantsRes, flowerRes, harvestsRes, batchesRes, ordersRes] = await Promise.all([
         supabase.from("grow_plants").select("*", { count: "exact", head: true }).eq("org_id", orgId).not("phase", "in", "(destroyed,harvested)"),
         supabase.from("grow_plants").select("*", { count: "exact", head: true }).eq("org_id", orgId).in("phase", ["flowering", "ready_for_harvest"]),
-        supabase.from("grow_cycles").select("*", { count: "exact", head: true }).eq("org_id", orgId).eq("phase", "flowering").lte("expected_harvest_date", sevenDaysFromNow),
+        supabase.from("grow_cycles").select("*", { count: "exact", head: true }).eq("org_id", orgId).eq("phase", "flowering").lte("target_harvest_date", sevenDaysFromNow),
         supabase.from("grow_batches").select("current_weight_grams").eq("org_id", orgId).eq("is_available", true).gt("current_quantity", 0),
         supabase.from("grow_orders").select("*", { count: "exact", head: true }).eq("org_id", orgId).not("status", "in", "(completed,cancelled)"),
       ]);
@@ -80,9 +80,13 @@ export function useUpcomingHarvests(days: number = 7) {
     setLoading(true);
     (async () => {
       const cutoff = new Date(Date.now() + days * 86400000).toISOString();
+      // Use target_harvest_date (the real column) and keep the phase filter to
+      // values the DB CHECK constraint definitely allows. "ready_for_harvest"
+      // isn't guaranteed on every deployment — cycles actively flowering with
+      // a near-term target date cover the same UX intent.
       const { data: rows } = await supabase.from("grow_cycles")
-        .select("*").eq("org_id", orgId).in("phase", ["flowering", "ready_for_harvest"])
-        .lte("expected_harvest_date", cutoff).order("expected_harvest_date", { ascending: true }).limit(10);
+        .select("*").eq("org_id", orgId).eq("phase", "flowering")
+        .lte("target_harvest_date", cutoff).order("target_harvest_date", { ascending: true }).limit(10);
       const strainIds = Array.from(new Set(((rows ?? []) as any[]).map((r) => r.strain_id).filter(Boolean)));
       const areaIds = Array.from(new Set(((rows ?? []) as any[]).map((r) => r.area_id).filter(Boolean)));
       const [sRes, aRes] = await Promise.all([
@@ -150,19 +154,40 @@ export function useRecentActivity(limit: number = 10) {
     setLoading(true);
     (async () => {
       // Prefer the pre-joined materialized view (enriched with user name + avatar,
-      // already filtered to the last 30 days and capped at 1000 rows). Falls back
-      // to the raw audit log if the view doesn't exist yet (older environments).
-      const matview = await supabase.from("grow_recent_activity" as any)
-        .select("*").eq("org_id", orgId)
-        .order("created_at", { ascending: false }).limit(limit);
-      if (cancelled) return;
-      if (matview.error) {
-        const { data: rows } = await supabase.from("grow_audit_log").select("*").eq("org_id", orgId).order("created_at", { ascending: false }).limit(limit);
+      // already filtered to the last 30 days and capped at 1000 rows).
+      //
+      // The view is created by migration 20260416210000_integrations_and_marketplace.sql.
+      // On environments where the migration hasn't run yet Supabase returns
+      // PGRST205 / 404 "relation does not exist" — fall through to the raw
+      // audit log so the Dashboard still renders.
+      let rows: any[] | null = null;
+      try {
+        const matview = await supabase.from("grow_recent_activity" as any)
+          .select("*").eq("org_id", orgId)
+          .order("created_at", { ascending: false }).limit(limit);
         if (cancelled) return;
-        setData((rows ?? []) as any[]);
-      } else {
-        setData((matview.data ?? []) as any[]);
+        if (!matview.error && matview.data) {
+          rows = matview.data as any[];
+        } else if (matview.error) {
+          console.warn(
+            "[useRecentActivity] grow_recent_activity unavailable — falling back to grow_audit_log.",
+            "Run migration 20260416210000_integrations_and_marketplace.sql to enable the materialized view.",
+            matview.error.message,
+          );
+        }
+      } catch (err) {
+        console.warn("[useRecentActivity] matview query threw:", err);
       }
+      if (rows === null) {
+        const { data: raw, error: rawErr } = await supabase.from("grow_audit_log")
+          .select("*").eq("org_id", orgId)
+          .order("created_at", { ascending: false }).limit(limit);
+        if (cancelled) return;
+        if (rawErr) console.warn("[useRecentActivity] audit log query failed:", rawErr.message);
+        rows = (raw ?? []) as any[];
+      }
+      if (cancelled) return;
+      setData(rows);
       setLoading(false);
     })();
     return () => { cancelled = true; };

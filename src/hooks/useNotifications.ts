@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { subscribeToChanges } from "@/lib/realtime";
 import { useAuth } from "@/lib/auth";
 import { useOrg } from "@/lib/org";
 
@@ -42,18 +43,14 @@ export function useNotifications(limit: number = 20) {
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
-  // Realtime: push-refresh when this user's notifications change
+  // Realtime: push-refresh when this user's notifications change.
+  // Wrapped so a Realtime failure never crashes the notification bell.
   useEffect(() => {
     if (!user?.id) return;
-    const channel = supabase
-      .channel(`notifications:${user.id}`)
-      .on(
-        "postgres_changes" as any,
-        { event: "*", schema: "public", table: "grow_in_app_notifications", filter: `user_id=eq.${user.id}` },
-        () => setTick((t) => t + 1),
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const sub = subscribeToChanges(`notifications:${user.id}`, [
+      { table: "grow_in_app_notifications", filter: `user_id=eq.${user.id}`, callback: () => setTick((t) => t + 1) },
+    ]);
+    return () => sub.unsubscribe();
   }, [user?.id]);
 
   return { data, loading, refresh };
@@ -81,15 +78,10 @@ export function useUnreadCount() {
   // Realtime: bump tick when this user's notifications change
   useEffect(() => {
     if (!user?.id) return;
-    const channel = supabase
-      .channel(`notifications-count:${user.id}`)
-      .on(
-        "postgres_changes" as any,
-        { event: "*", schema: "public", table: "grow_in_app_notifications", filter: `user_id=eq.${user.id}` },
-        () => setTick((t) => t + 1),
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const sub = subscribeToChanges(`notifications-count:${user.id}`, [
+      { table: "grow_in_app_notifications", filter: `user_id=eq.${user.id}`, callback: () => setTick((t) => t + 1) },
+    ]);
+    return () => sub.unsubscribe();
   }, [user?.id]);
 
   return { count, refresh };

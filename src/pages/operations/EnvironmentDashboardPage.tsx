@@ -17,6 +17,7 @@ import DateTime from "@/components/shared/DateTime";
 import EmptyState from "@/components/shared/EmptyState";
 import { useCodyContext } from "@/hooks/useCodyContext";
 import { supabase } from "@/lib/supabase";
+import { subscribeToChanges } from "@/lib/realtime";
 import { useAuth } from "@/lib/auth";
 import { useOrg } from "@/lib/org";
 import { cn } from "@/lib/utils";
@@ -64,19 +65,16 @@ export default function EnvironmentDashboardPage() {
   const [view, setView] = useState<MetricView>("temperature");
   const [tick, setTick] = useState(0);
 
-  // Realtime: readings + alerts both invalidate the dashboard
+  // Realtime: readings + alerts both invalidate the dashboard (best-effort).
+  // Multiple listeners share a single channel — all .on() calls happen before
+  // .subscribe() inside the helper, and failures don't crash the page.
   useEffect(() => {
     if (!orgId) return;
-    const channel = supabase
-      .channel(`environment:${orgId}`)
-      .on("postgres_changes" as any,
-        { event: "*", schema: "public", table: "grow_environmental_alerts", filter: `org_id=eq.${orgId}` },
-        () => setTick((t) => t + 1))
-      .on("postgres_changes" as any,
-        { event: "INSERT", schema: "public", table: "grow_environmental_readings" },
-        () => setTick((t) => t + 1))
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const sub = subscribeToChanges(`environment:${orgId}`, [
+      { table: "grow_environmental_alerts", filter: `org_id=eq.${orgId}`, callback: () => setTick((t) => t + 1) },
+      { event: "INSERT", table: "grow_environmental_readings", callback: () => setTick((t) => t + 1) },
+    ]);
+    return () => sub.unsubscribe();
   }, [orgId]);
 
   useEffect(() => {

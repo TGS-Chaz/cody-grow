@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { subscribeToChanges } from "@/lib/realtime";
 import { useAuth } from "@/lib/auth";
 import { useOrg } from "@/lib/org";
 
@@ -99,18 +100,13 @@ export function useTasks(filters: TaskFilters = {}) {
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
-  // Realtime: any task change for this org → refetch
+  // Realtime: any task change for this org → refetch (best-effort)
   useEffect(() => {
     if (!orgId) return;
-    const channel = supabase
-      .channel(`tasks:${orgId}`)
-      .on(
-        "postgres_changes" as any,
-        { event: "*", schema: "public", table: "grow_tasks", filter: `org_id=eq.${orgId}` },
-        () => setTick((t) => t + 1),
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const sub = subscribeToChanges(`tasks:${orgId}`, [
+      { table: "grow_tasks", filter: `org_id=eq.${orgId}`, callback: () => setTick((t) => t + 1) },
+    ]);
+    return () => sub.unsubscribe();
   }, [orgId]);
 
   return { data, loading, refresh };
