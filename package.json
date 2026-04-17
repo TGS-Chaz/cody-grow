@@ -28,6 +28,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "cody-shared": "github:TGS-Chaz/cody-shared#main",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
     "papaparse": "^5.5.3",
