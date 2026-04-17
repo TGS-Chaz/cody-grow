@@ -15,6 +15,7 @@ import DataTable from "@/components/shared/DataTable";
 import DateTime from "@/components/shared/DateTime";
 import EmptyState from "@/components/shared/EmptyState";
 import CopyableId from "@/components/shared/CopyableId";
+import BarcodeRenderer from "@/components/shared/BarcodeRenderer";
 import { useShortcut } from "@/components/shared/KeyboardShortcuts";
 import { useCodyContext } from "@/hooks/useCodyContext";
 import {
@@ -219,6 +220,7 @@ export default function ManifestDetailPage() {
 
       <div className="flex items-center gap-2 text-[12px] text-muted-foreground mb-6 -mt-4 flex-wrap">
         <CopyableId value={manifest.external_id} className="text-[11px]" />
+        <BarcodeRenderer value={manifest.external_id} format="code128" height={40} showText={false} />
         {manifest.order && (
           <>
             <span>·</span>

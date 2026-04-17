@@ -102,11 +102,51 @@ export default function CCRSDashboardPage() {
 
   const handleMarkUploaded = async (csv: GeneratedCSV) => {
     try {
-      await recordSub(csv, licenseNumber);
-      toast.success(`${CCRS_CATEGORY_LABELS[csv.category]} submission recorded`);
+      const submission = await recordSub(csv, licenseNumber);
+      // Call the edge function to queue for upload (manual or direct depending on integrator status)
+      try {
+        const { data, error: fnErr } = await supabase.functions.invoke("upload-to-ccrs", {
+          body: { submission_file_id: (submission as any).id, org_id: orgId },
+        });
+        if (fnErr) throw fnErr;
+        const result = data as any;
+        if (result?.mode === "manual") {
+          toast.info(`${CCRS_CATEGORY_LABELS[csv.category]} ready for manual upload`, {
+            description: "Download the CSV and upload at cannabisreporting.lcb.wa.gov.",
+            action: { label: "Open CCRS Portal →", onClick: () => window.open(result.portal_url, "_blank") },
+            duration: 10000,
+          });
+        } else {
+          toast.success(`${CCRS_CATEGORY_LABELS[csv.category]} submitted`);
+        }
+      } catch (fnErr: any) {
+        toast.success(`${CCRS_CATEGORY_LABELS[csv.category]} submission recorded`, {
+          description: "Upload function not yet deployed — CSV tracked locally.",
+        });
+        void fnErr;
+      }
       refresh();
       refreshSubs();
       setPreviewCSV(null);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed");
+    }
+  };
+
+  const handleConfirmUpload = async (submissionId: string) => {
+    try {
+      const { error: fnErr } = await supabase.functions.invoke("upload-to-ccrs", {
+        body: { submission_file_id: submissionId, org_id: orgId, confirm_manual_upload: true },
+      });
+      if (fnErr) {
+        // Fall back to direct DB update if function isn't deployed
+        await supabase.from("grow_ccrs_submission_files").update({
+          status: "accepted", accepted_at: new Date().toISOString(),
+        }).eq("id", submissionId);
+      }
+      toast.success("Marked as accepted");
+      refreshSubs();
+      refresh();
     } catch (err: any) {
       toast.error(err?.message ?? "Failed");
     }
@@ -121,7 +161,16 @@ export default function CCRSDashboardPage() {
     { accessorKey: "errors_count", header: "Errors", cell: ({ row }) => Number(row.original.errors_count ?? 0) > 0 ? <span className="font-mono text-[12px] text-destructive">{row.original.errors_count}</span> : <span className="text-muted-foreground">—</span> },
     { accessorKey: "submitted_date", header: "Submitted", cell: ({ row }) => row.original.submitted_date ? <DateTime value={row.original.submitted_date} format="date-only" className="text-[12px]" /> : <span className="text-muted-foreground">—</span> },
     { accessorKey: "uploaded_at", header: "Uploaded", cell: ({ row }) => row.original.uploaded_at ? <DateTime value={row.original.uploaded_at} className="text-[12px]" /> : <span className="text-muted-foreground">—</span> },
-  ], []);
+    {
+      id: "actions", enableSorting: false, header: "",
+      cell: ({ row }) => (
+        row.original.status === "queued_manual" || (row.original.status === "uploaded" && !row.original.accepted_at)
+          ? <Button size="sm" variant="outline" onClick={() => handleConfirmUpload(row.original.id)} className="h-7 px-2 text-[11px] gap-1"><CheckCircle2 className="w-3 h-3" /> Confirm Upload</Button>
+          : null
+      ),
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [orgId]);
 
   return (
     <div className="p-6 md:p-8 max-w-[1700px] mx-auto">

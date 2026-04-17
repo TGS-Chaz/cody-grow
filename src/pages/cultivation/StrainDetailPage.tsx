@@ -15,6 +15,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import PageHeader from "@/components/shared/PageHeader";
+import BarcodeRenderer from "@/components/shared/BarcodeRenderer";
 import StatCard from "@/components/shared/StatCard";
 import StatusPill from "@/components/shared/StatusPill";
 import DataTable from "@/components/shared/DataTable";
@@ -162,7 +163,7 @@ export default function StrainDetailPage() {
       {/* Hero */}
       <div className="rounded-xl border border-border bg-card p-6 mb-6">
         <div className="flex flex-col md:flex-row gap-6">
-          <div className={cn("w-full md:w-[200px] h-[200px] rounded-xl overflow-hidden shrink-0 bg-gradient-to-br", color.gradient)}>
+          <div className={cn("relative w-full md:w-[200px] h-[200px] rounded-xl overflow-hidden shrink-0 bg-gradient-to-br", color.gradient)}>
             {strain.image_url ? (
               <img src={strain.image_url} alt={strain.name} className="w-full h-full object-cover" />
             ) : (
@@ -170,6 +171,9 @@ export default function StrainDetailPage() {
                 <Dna className="w-12 h-12 text-foreground/25" />
               </div>
             )}
+            <div className="absolute bottom-2 right-2 rounded-md bg-white/90 p-1 shadow-sm" title="Scan for strain info">
+              <BarcodeRenderer value={strain.name} format="qr" width={56} height={56} showText={false} />
+            </div>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">

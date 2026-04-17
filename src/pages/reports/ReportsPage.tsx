@@ -22,6 +22,7 @@ import {
   SavedReport,
 } from "@/hooks/useReports";
 import { CATEGORY_COLORS, REPORT_CATEGORIES, ReportCategory } from "@/lib/reports/prebuilt";
+import { supabase } from "@/lib/supabase";
 import { ScheduleReportModal } from "./ScheduleReportModal";
 import { ReportBuilderModal } from "./ReportBuilderModal";
 import { cn } from "@/lib/utils";
@@ -93,7 +94,16 @@ export default function ReportsPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild><button className="p-1 rounded hover:bg-accent">⋯</button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => toast.info("Run now — coming when scheduler is live")}><Play className="w-3.5 h-3.5" /> Run Now</DropdownMenuItem>
+              <DropdownMenuItem onClick={async () => {
+                try {
+                  const { data, error } = await supabase.functions.invoke("send-scheduled-report", { body: { schedule_id: row.original.id } });
+                  if (error) throw error;
+                  const result = (data as any)?.results?.[0];
+                  if (result?.status === "failed") toast.error(`Run failed: ${result.error}`);
+                  else toast.success(`Ran report · ${result?.rows ?? 0} rows · ${result?.status ?? "done"}`);
+                  refreshSchedules();
+                } catch (err: any) { toast.error(err?.message ?? "Function invoke failed — is it deployed?"); }
+              }}><Play className="w-3.5 h-3.5" /> Run Now</DropdownMenuItem>
               <DropdownMenuItem onClick={async () => { try { await updateSchedule(row.original.id, { is_active: !row.original.is_active }); toast.success(row.original.is_active ? "Paused" : "Resumed"); refreshSchedules(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } }}>
                 {row.original.is_active ? <><Pause className="w-3.5 h-3.5" /> Pause</> : <><Play className="w-3.5 h-3.5" /> Resume</>}
               </DropdownMenuItem>

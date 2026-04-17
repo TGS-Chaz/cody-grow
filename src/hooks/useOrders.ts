@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useOrg } from "@/lib/org";
 import { generateExternalId } from "@/lib/ccrs-id";
 import type { OrderStatus, OrderSaleType } from "@/lib/schema-enums";
+import { validatePurchaseLimits, PurchaseLimitViolation } from "@/lib/validation/purchaseLimits";
 
 export interface Order {
   id: string;
@@ -351,10 +352,25 @@ async function recomputeOrderTotals(orderId: string) {
 
 // ─── Allocations ────────────────────────────────────────────────────────────
 
+export interface PackToOrderSuggestion {
+  item_id: string;
+  product_id: string;
+  quantity_needed: number;
+  source_batch: { id: string; barcode: string; current_quantity: number };
+}
+
+export interface AllocateResult {
+  fulfilled: number;
+  unfulfilled: number;
+  packToOrderSuggestions: PackToOrderSuggestion[];
+}
+
 export function useAllocateOrder() {
-  return useCallback(async (orderId: string): Promise<{ fulfilled: number; unfulfilled: number }> => {
+  return useCallback(async (orderId: string): Promise<AllocateResult> => {
     const { data: items } = await supabase.from("grow_order_items").select("*").eq("order_id", orderId);
     let fulfilled = 0, unfulfilled = 0;
+    const packToOrderSuggestions: PackToOrderSuggestion[] = [];
+
     for (const item of (items ?? []) as any[]) {
       // Check existing allocations
       const { data: existingAllocs } = await supabase.from("grow_order_allocations")
@@ -363,13 +379,17 @@ export function useAllocateOrder() {
       let remaining = Number(item.quantity ?? 0) - alreadyAllocated;
       if (remaining <= 0) { fulfilled++; continue; }
 
-      // Find available batches (FIFO by created_at, matching product, available=true)
+      // Find available batches (FIFO by created_at, matching product, available=true).
+      // Pack-to-order batches are surfaced separately so the user can package first.
       const { data: batches } = await supabase.from("grow_batches")
-        .select("id, current_quantity, current_weight_grams, barcode")
+        .select("id, current_quantity, current_weight_grams, barcode, is_pack_to_order")
         .eq("product_id", item.product_id).eq("is_available", true).gt("current_quantity", 0)
         .order("created_at", { ascending: true });
 
-      for (const batch of (batches ?? []) as any[]) {
+      const regular = ((batches ?? []) as any[]).filter((b) => !b.is_pack_to_order);
+      const packToOrder = ((batches ?? []) as any[]).filter((b) => b.is_pack_to_order);
+
+      for (const batch of regular) {
         if (remaining <= 0) break;
         const take = Math.min(remaining, Number(batch.current_quantity));
         await supabase.from("grow_order_allocations").insert({
@@ -384,12 +404,46 @@ export function useAllocateOrder() {
         }).eq("id", batch.id);
         remaining -= take;
       }
-      if (remaining > 0) unfulfilled++; else fulfilled++;
+
+      if (remaining > 0) {
+        // See if a pack-to-order batch could cover the remainder
+        const source = packToOrder.find((b) => Number(b.current_quantity) >= remaining);
+        if (source) {
+          packToOrderSuggestions.push({
+            item_id: item.id,
+            product_id: item.product_id,
+            quantity_needed: remaining,
+            source_batch: { id: source.id, barcode: source.barcode, current_quantity: Number(source.current_quantity) },
+          });
+        }
+        unfulfilled++;
+      } else {
+        fulfilled++;
+      }
     }
+
     if ((items ?? []).length > 0 && unfulfilled === 0) {
       await supabase.from("grow_orders").update({ status: "allocated" }).eq("id", orderId);
     }
-    return { fulfilled, unfulfilled };
+    return { fulfilled, unfulfilled, packToOrderSuggestions };
+  }, []);
+}
+
+/** Allocate a pre-packaged sublot (just-created via PackagingModal) to a specific order item. */
+export function useAllocatePackedSublot() {
+  return useCallback(async (orderItemId: string, sublotBatchId: string, quantity: number) => {
+    const { data: batch } = await supabase.from("grow_batches")
+      .select("current_quantity, current_weight_grams").eq("id", sublotBatchId).maybeSingle();
+    if (!batch) throw new Error("Sublot not found");
+    const take = Math.min(quantity, Number((batch as any).current_quantity ?? 0));
+    if (take <= 0) throw new Error("Sublot has no quantity");
+    await supabase.from("grow_order_allocations").insert({
+      order_item_id: orderItemId, batch_id: sublotBatchId, quantity: take,
+    });
+    const newQty = Number((batch as any).current_quantity) - take;
+    await supabase.from("grow_batches").update({
+      current_quantity: newQty, current_weight_grams: newQty,
+    }).eq("id", sublotBatchId);
   }, []);
 }
 
@@ -464,4 +518,44 @@ export function useOrderStats(orders: Order[]) {
       totalRevenue,
     };
   }, [orders]);
+}
+
+/**
+ * Live purchase-limit validation for retail orders. Pulls order items with
+ * product category/type/unit_weight and runs them through the WA limits
+ * validator. Returns violations that drive toast + banner UI.
+ */
+export function useOrderPurchaseLimitCheck(orderId: string | undefined, saleType: OrderSaleType | null | undefined) {
+  const [violations, setViolations] = useState<PurchaseLimitViolation[]>([]);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!orderId || saleType !== "RecreationalRetail") { setViolations([]); return; }
+    let cancelled = false;
+    (async () => {
+      const { data: items } = await supabase.from("grow_order_items")
+        .select("quantity, product_id").eq("order_id", orderId);
+      const productIds = Array.from(new Set(((items ?? []) as any[]).map((i) => i.product_id).filter(Boolean)));
+      const { data: products } = productIds.length > 0
+        ? await supabase.from("grow_products").select("id, category, ccrs_inventory_type, unit_weight_grams, servings_per_unit").in("id", productIds)
+        : { data: [] };
+      const pById = new Map<string, any>((products ?? []).map((p: any) => [p.id, p]));
+      const enriched = ((items ?? []) as any[]).map((i) => {
+        const p = pById.get(i.product_id);
+        return {
+          quantity: Number(i.quantity ?? 0),
+          unit_weight_grams: p?.unit_weight_grams ?? null,
+          servings_per_unit: p?.servings_per_unit ?? null,
+          ccrs_inventory_type: p?.ccrs_inventory_type ?? null,
+          product_category: p?.category ?? null,
+        };
+      });
+      const result = validatePurchaseLimits(enriched);
+      if (!cancelled) setViolations(result.violations);
+    })();
+    return () => { cancelled = true; };
+  }, [orderId, saleType, tick]);
+
+  const refresh = useCallback(() => setTick((t) => t + 1), []);
+  return { violations, refresh };
 }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ShoppingCart, Loader2, Send, Package, Truck, CheckCircle2, XCircle, Activity, MoreHorizontal,
-  Plus, Trash2, Building2, DollarSign, FileText, Edit, ArrowRight,
+  Plus, Trash2, Building2, DollarSign, FileText, Edit, ArrowRight, AlertCircle,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
@@ -21,8 +21,12 @@ import { useCodyContext } from "@/hooks/useCodyContext";
 import {
   useOrder, useOrderItems, useOrderAllocations, useAllocateOrder, useDeallocateOrder,
   useSubmitOrder, useReleaseOrder, useCompleteOrder, useCancelOrder, useRemoveOrderItem,
-  Order, OrderItem, OrderAllocation,
+  useAllocatePackedSublot, useOrderPurchaseLimitCheck,
+  Order, OrderItem, OrderAllocation, PackToOrderSuggestion,
 } from "@/hooks/useOrders";
+import type { PurchaseLimitViolation } from "@/lib/validation/purchaseLimits";
+import { PackagingModal } from "@/pages/inventory/PackagingModal";
+import type { Batch } from "@/hooks/useBatches";
 import { ORDER_SALE_TYPE_LABELS, OrderSaleType } from "@/lib/schema-enums";
 import { AddOrderItemModal } from "./OrderModals";
 import { cn } from "@/lib/utils";
@@ -63,8 +67,26 @@ export default function OrderDetailPage() {
   const complete = useCompleteOrder();
   const cancel = useCancelOrder();
   const removeItem = useRemoveOrderItem();
+  const allocatePacked = useAllocatePackedSublot();
+  const { violations: limitViolations, refresh: refreshLimits } = useOrderPurchaseLimitCheck(id, order?.sale_type);
 
   const [addItemOpen, setAddItemOpen] = useState(false);
+  const [packSuggestions, setPackSuggestions] = useState<PackToOrderSuggestion[]>([]);
+  const [packingForItem, setPackingForItem] = useState<{ item_id: string; qty: number; source: Batch } | null>(null);
+  const [lastViolationKey, setLastViolationKey] = useState<string>("");
+
+  // Toast on new violations
+  useEffect(() => {
+    if (limitViolations.length === 0) { setLastViolationKey(""); return; }
+    const key = limitViolations.map((v) => `${v.bucket}:${v.ordered}`).join("|");
+    if (key === lastViolationKey) return;
+    setLastViolationKey(key);
+    for (const v of limitViolations) {
+      toast.warning(`Purchase limit exceeded: ${v.bucketLabel}`, {
+        description: `${v.ordered.toFixed(1)}${v.unit} ordered · WA limit is ${v.limit}${v.unit}`,
+      });
+    }
+  }, [limitViolations, lastViolationKey]);
 
   const { setContext, clearContext } = useCodyContext();
   const payload = useMemo(() => {
@@ -102,7 +124,7 @@ export default function OrderDetailPage() {
 
   const primaryAction = (() => {
     if (order.status === "draft") return { label: "Submit", icon: Send, onClick: async () => { try { await submit(order.id); toast.success("Order submitted"); refresh(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } } };
-    if (order.status === "submitted") return { label: "Allocate Inventory", icon: Package, onClick: async () => { try { const r = await allocate(order.id); toast.success(`${r.fulfilled} item${r.fulfilled === 1 ? "" : "s"} allocated${r.unfulfilled > 0 ? `, ${r.unfulfilled} unfulfilled` : ""}`); refresh(); refreshAllocs(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } } };
+    if (order.status === "submitted") return { label: "Allocate Inventory", icon: Package, onClick: async () => { try { const r = await allocate(order.id); setPackSuggestions(r.packToOrderSuggestions); toast.success(`${r.fulfilled} item${r.fulfilled === 1 ? "" : "s"} allocated${r.unfulfilled > 0 ? `, ${r.unfulfilled} unfulfilled` : ""}${r.packToOrderSuggestions.length > 0 ? ` · ${r.packToOrderSuggestions.length} need packaging` : ""}`); refresh(); refreshAllocs(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } } };
     if (order.status === "allocated") return { label: "Create Manifest", icon: FileText, onClick: () => navigate(`/sales/manifests?create=1&order_id=${order.id}`) };
     if (order.status === "manifested") return { label: "Release", icon: Truck, onClick: async () => { try { await release(order.id); toast.success("Released"); refresh(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } } };
     if (order.status === "released") return { label: "Complete", icon: CheckCircle2, onClick: async () => { try { await complete(order.id); toast.success("Order completed"); refresh(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } } };
@@ -215,9 +237,10 @@ export default function OrderDetailPage() {
             order={order}
             loading={itemsLoading}
             onAdd={() => setAddItemOpen(true)}
-            onRemove={async (itemId) => { try { await removeItem(itemId, order.id); toast.success("Removed"); refreshItems(); refresh(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } }}
+            onRemove={async (itemId) => { try { await removeItem(itemId, order.id); toast.success("Removed"); refreshItems(); refresh(); refreshLimits(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } }}
             canEdit={order.status === "draft"}
             fullyAllocated={fullyAllocated}
+            limitViolations={limitViolations}
           />
         </TabsContent>
         <TabsContent value="allocations">
@@ -226,8 +249,10 @@ export default function OrderDetailPage() {
             items={items}
             loading={allocsLoading}
             canAllocate={order.status === "submitted" || order.status === "allocated"}
-            onAllocate={async () => { try { const r = await allocate(order.id); toast.success(`${r.fulfilled} fulfilled, ${r.unfulfilled} unfulfilled`); refresh(); refreshAllocs(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } }}
-            onDeallocate={async () => { try { await deallocate(order.id); toast.success("Deallocated"); refresh(); refreshAllocs(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } }}
+            onAllocate={async () => { try { const r = await allocate(order.id); setPackSuggestions(r.packToOrderSuggestions); toast.success(`${r.fulfilled} fulfilled, ${r.unfulfilled} unfulfilled${r.packToOrderSuggestions.length > 0 ? ` · ${r.packToOrderSuggestions.length} need packaging` : ""}`); refresh(); refreshAllocs(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } }}
+            onDeallocate={async () => { try { await deallocate(order.id); setPackSuggestions([]); toast.success("Deallocated"); refresh(); refreshAllocs(); } catch (err: any) { toast.error(err?.message ?? "Failed"); } }}
+            packSuggestions={packSuggestions}
+            onPackAndAllocate={(s) => setPackingForItem({ item_id: s.item_id, qty: s.quantity_needed, source: { id: s.source_batch.id, barcode: s.source_batch.barcode, current_quantity: s.source_batch.current_quantity } as Batch })}
           />
         </TabsContent>
         <TabsContent value="manifest">
@@ -245,14 +270,32 @@ export default function OrderDetailPage() {
         </TabsContent>
       </Tabs>
 
-      <AddOrderItemModal open={addItemOpen} onClose={() => setAddItemOpen(false)} orderId={order.id} saleType={order.sale_type as OrderSaleType | null} onSuccess={() => { refreshItems(); refresh(); }} />
+      <AddOrderItemModal open={addItemOpen} onClose={() => setAddItemOpen(false)} orderId={order.id} saleType={order.sale_type as OrderSaleType | null} onSuccess={() => { refreshItems(); refresh(); refreshLimits(); }} />
+
+      <PackagingModal
+        open={!!packingForItem}
+        onClose={() => setPackingForItem(null)}
+        sourceBatch={packingForItem?.source ?? null}
+        orderQuantity={packingForItem?.qty}
+        onSuccess={async (child) => {
+          if (!packingForItem) return;
+          try {
+            await allocatePacked(packingForItem.item_id, child.id, packingForItem.qty);
+            toast.success(`Packaged sublot ${child.barcode} and allocated to order`);
+            setPackSuggestions((prev) => prev.filter((s) => s.item_id !== packingForItem.item_id));
+            setPackingForItem(null);
+            refresh(); refreshAllocs(); refreshItems();
+          } catch (err: any) { toast.error(err?.message ?? "Allocation failed"); }
+        }}
+      />
     </div>
   );
 }
 
 // ─── Items panel ────────────────────────────────────────────────────────────
-function ItemsPanel({ items, order, loading, onAdd, onRemove, canEdit, fullyAllocated }: {
+function ItemsPanel({ items, order, loading, onAdd, onRemove, canEdit, fullyAllocated, limitViolations }: {
   items: OrderItem[]; order: Order; loading: boolean; onAdd: () => void; onRemove: (id: string) => void; canEdit: boolean; fullyAllocated: boolean;
+  limitViolations: PurchaseLimitViolation[];
 }) {
   const navigate = useNavigate();
   const columns: ColumnDef<OrderItem>[] = useMemo(() => [
@@ -297,6 +340,25 @@ function ItemsPanel({ items, order, loading, onAdd, onRemove, canEdit, fullyAllo
 
   return (
     <div className="space-y-3">
+      {limitViolations.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+          <div className="flex items-start gap-2 mb-2">
+            <AlertCircle className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
+            <div className="flex-1">
+              <div className="text-[13px] font-semibold text-foreground">Exceeds WA retail purchase limits</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">Limits apply per end-consumer per transaction. If this order is for retail resale, the retailer handles compliance.</div>
+            </div>
+          </div>
+          <ul className="text-[12px] space-y-1 mt-2 pl-6">
+            {limitViolations.map((v) => (
+              <li key={v.bucket} className="flex items-center justify-between gap-3">
+                <span><span className="font-semibold">{v.bucketLabel}</span>: <span className="font-mono">{v.ordered.toFixed(1)}{v.unit}</span> ordered</span>
+                <span className="text-muted-foreground font-mono text-[11px]">WA limit: {v.limit}{v.unit}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h3 className="text-[13px] font-semibold">Line items</h3>
@@ -325,10 +387,12 @@ function ItemsPanel({ items, order, loading, onAdd, onRemove, canEdit, fullyAllo
 }
 
 // ─── Allocations ────────────────────────────────────────────────────────────
-function AllocationsPanel({ allocations, items, loading, canAllocate, onAllocate, onDeallocate }: {
+function AllocationsPanel({ allocations, items, loading, canAllocate, onAllocate, onDeallocate, packSuggestions, onPackAndAllocate }: {
   allocations: OrderAllocation[]; items: OrderItem[]; loading: boolean; canAllocate: boolean; onAllocate: () => void; onDeallocate: () => void;
+  packSuggestions: PackToOrderSuggestion[]; onPackAndAllocate: (s: PackToOrderSuggestion) => void;
 }) {
   const navigate = useNavigate();
+  const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const columns: ColumnDef<OrderAllocation>[] = useMemo(() => [
     { id: "item", header: "Order Item", cell: ({ row }) => row.original.product?.name ?? <span className="text-muted-foreground">—</span> },
     { id: "batch", header: "Batch", cell: ({ row }) => row.original.batch ? <button onClick={() => navigate(`/inventory/batches/${row.original.batch!.id}`)} className="font-mono text-[12px] text-primary hover:underline">{row.original.batch.barcode}</button> : <span className="text-muted-foreground">—</span> },
@@ -352,6 +416,33 @@ function AllocationsPanel({ allocations, items, loading, canAllocate, onAllocate
           {canAllocate && <Button size="sm" onClick={onAllocate} className="gap-1.5"><Package className="w-3.5 h-3.5" /> Auto-Allocate (FIFO)</Button>}
         </div>
       </div>
+
+      {packSuggestions.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+          <div className="flex items-start gap-2">
+            <Package className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
+            <div className="flex-1">
+              <div className="text-[13px] font-semibold">{packSuggestions.length} item{packSuggestions.length === 1 ? "" : "s"} need packaging before allocation</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">A pack-to-order source batch can fulfill these — package the required quantity into a sublot first.</div>
+            </div>
+          </div>
+          <ul className="divide-y divide-amber-500/20">
+            {packSuggestions.map((s) => {
+              const item = itemById.get(s.item_id);
+              return (
+                <li key={s.item_id} className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
+                  <div className="text-[12px]">
+                    <div className="font-medium">{item?.product?.name ?? "Item"}</div>
+                    <div className="text-[11px] text-muted-foreground font-mono">Source: {s.source_batch.barcode} · need {s.quantity_needed.toFixed(1)}g</div>
+                  </div>
+                  <Button size="sm" onClick={() => onPackAndAllocate(s)} className="gap-1.5 h-7 text-[11px]"><Package className="w-3 h-3" /> Package & Allocate</Button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
       <DataTable
         columns={columns} data={allocations} loading={loading}
         empty={{

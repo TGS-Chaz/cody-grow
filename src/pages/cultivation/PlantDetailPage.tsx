@@ -21,6 +21,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import PhaseColorBadge from "@/components/shared/PhaseColorBadge";
 import StatusPill from "@/components/shared/StatusPill";
 import CopyableId from "@/components/shared/CopyableId";
+import BarcodeRenderer from "@/components/shared/BarcodeRenderer";
 import DateTime from "@/components/shared/DateTime";
 import DataTable from "@/components/shared/DataTable";
 import EmptyState from "@/components/shared/EmptyState";
@@ -249,6 +250,7 @@ export default function PlantDetailPage() {
       {/* Hero subtitle with copyable id + strain */}
       <div className="flex items-center gap-3 mb-6 -mt-4 flex-wrap">
         <CopyableId value={plant.plant_identifier ?? plant.external_id} />
+        <BarcodeRenderer value={plant.plant_identifier ?? plant.external_id} format="code128" height={40} showText={false} />
         {plant.strain && (
           <>
             <span className="text-muted-foreground">·</span>

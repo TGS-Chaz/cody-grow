@@ -12,9 +12,13 @@ import { useOrg } from "@/lib/org";
 import {
   useKioskSession, useKioskLogin, useLatestPunch, useKioskPunch, useKioskTasks,
   useKioskScanPlant, useKioskScanBatch, useKioskLog,
+  useKioskScaleReading, useKioskActiveHarvests, useKioskRecordInventoryWaste,
 } from "@/hooks/useKiosk";
 import { supabase } from "@/lib/supabase";
 import { useCompleteTask } from "@/hooks/useTasks";
+import { useRecordWetWeight, useRecordDryWeight } from "@/hooks/useHarvests";
+import { useDestroyPlant } from "@/hooks/usePlants";
+import { CCRS_ADJUSTMENT_REASONS, CCRS_DESTRUCTION_REASONS, CCRS_DESTRUCTION_METHODS, CcrsDestructionReason, CcrsDestructionMethod } from "@/lib/schema-enums";
 import { cn } from "@/lib/utils";
 
 type Screen = "login" | "home" | "clock" | "scan-plant" | "weigh" | "tasks" | "log" | "waste" | "scan-batch";
@@ -59,7 +63,7 @@ export default function KioskPage() {
         {screen === "home" && <HomeScreen session={session} onNavigate={setScreen} />}
         {screen === "clock" && <ClockScreen session={session} />}
         {screen === "scan-plant" && <PlantScanScreen />}
-        {screen === "weigh" && <WeighScreen />}
+        {screen === "weigh" && <WeighScreen session={session} />}
         {screen === "tasks" && <TasksScreen session={session} />}
         {screen === "log" && <LogScreen onDone={() => setScreen("home")} />}
         {screen === "waste" && <WasteScreen />}
@@ -340,20 +344,61 @@ function BatchScanScreen() {
 }
 
 // ─── Weigh Screen ───────────────────────────────────────────────────────────
-function WeighScreen() {
+type WeighContext = "harvest_wet" | "harvest_dry" | "qa_sample" | "general";
+
+function WeighScreen({ session }: { session: any }) {
   const [weight, setWeight] = useState("");
-  const [context, setContext] = useState<"harvest_wet" | "harvest_dry" | "qa_sample" | "waste">("harvest_wet");
+  const [context, setContext] = useState<WeighContext>("harvest_wet");
+  const [harvestId, setHarvestId] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+  const harvests = useKioskActiveHarvests();
+  const recordScale = useKioskScaleReading();
+  const recordWet = useRecordWetWeight();
+  const recordDry = useRecordDryWeight();
+
+  const needsHarvest = context === "harvest_wet" || context === "harvest_dry";
+
+  const handleSave = async () => {
+    const w = Number(weight || 0);
+    if (w <= 0) { toast.error("Enter a weight"); return; }
+    if (needsHarvest && !harvestId) { toast.error("Pick a harvest"); return; }
+    setSaving(true);
+    try {
+      // Always record an audit-trail scale reading
+      await recordScale({
+        weight_grams: w,
+        entity_type: context,
+        entity_id: needsHarvest ? harvestId : null,
+      });
+      if (context === "harvest_wet" && harvestId) await recordWet(harvestId, w);
+      else if (context === "harvest_dry" && harvestId) await recordDry(harvestId, w);
+      toast.success(`Recorded ${w}g (${context.replace(/_/g, " ")})`);
+      setWeight("");
+      void session;
+    } catch (err: any) {
+      toast.error(err?.message ?? "Save failed");
+    } finally { setSaving(false); }
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       <h2 className="text-[22px] font-bold text-center">Weigh</h2>
       <div className="grid grid-cols-2 gap-3">
-        {(["harvest_wet", "harvest_dry", "qa_sample", "waste"] as const).map((c) => (
+        {(["harvest_wet", "harvest_dry", "qa_sample", "general"] as const).map((c) => (
           <button key={c} onClick={() => setContext(c)} className={cn("h-16 rounded-2xl border-2 font-semibold text-[14px] capitalize transition-all", context === c ? "border-primary bg-primary/10 text-primary" : "border-border bg-card")}>
             {c.replace(/_/g, " ")}
           </button>
         ))}
       </div>
+      {needsHarvest && (
+        <div className="space-y-2">
+          <label className="block text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Harvest</label>
+          <select value={harvestId} onChange={(e) => setHarvestId(e.target.value)} className="flex h-14 w-full rounded-xl border border-border bg-card px-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-primary">
+            <option value="">— Select harvest —</option>
+            {harvests.map((h) => <option key={h.id} value={h.id}>{h.name} · {h.status}</option>)}
+          </select>
+        </div>
+      )}
       <div className="relative">
         <Input value={weight} onChange={(e) => setWeight(e.target.value)} type="number" step="0.1" placeholder="0.0" className="h-32 text-[64px] font-mono text-center" />
         <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[24px] text-muted-foreground">g</span>
@@ -361,8 +406,8 @@ function WeighScreen() {
       <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-center text-[12px]">
         Bluetooth scale integration coming soon — enter weight manually for now.
       </div>
-      <Button disabled={!weight} className="w-full h-16 text-[16px] font-bold rounded-2xl" onClick={() => toast.info("Wire to harvest/QA/disposal flow coming soon")}>
-        Record Weight
+      <Button disabled={!weight || saving || (needsHarvest && !harvestId)} className="w-full h-16 text-[16px] font-bold rounded-2xl" onClick={handleSave}>
+        {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : "Record Weight"}
       </Button>
     </div>
   );
@@ -467,14 +512,150 @@ function LogScreen({ onDone }: { onDone: () => void }) {
 
 // ─── Waste Screen ───────────────────────────────────────────────────────────
 function WasteScreen() {
+  const [wasteType, setWasteType] = useState<"plant" | "inventory" | null>(null);
+  const [weight, setWeight] = useState("");
+  const [reason, setReason] = useState<string>("");
+  const [method, setMethod] = useState<CcrsDestructionMethod>("Compost");
+  const [inventoryReason, setInventoryReason] = useState<string>("Destruction");
+  const scanPlant = useKioskScanPlant();
+  const scanBatch = useKioskScanBatch();
+  const destroyPlant = useDestroyPlant();
+  const adjustWaste = useKioskRecordInventoryWaste();
+  const [entityInput, setEntityInput] = useState("");
+  const [entity, setEntity] = useState<any | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const lookupEntity = async () => {
+    if (!entityInput.trim() || !wasteType) return;
+    const e = wasteType === "plant" ? await scanPlant(entityInput.trim()) : await scanBatch(entityInput.trim());
+    if (!e) { toast.error(`${wasteType} not found`); return; }
+    setEntity(e);
+  };
+
+  const handleSave = async () => {
+    if (!entity || !weight) return;
+    const w = Number(weight);
+    if (w <= 0) { toast.error("Enter weight"); return; }
+    setSaving(true);
+    try {
+      if (wasteType === "plant") {
+        if (!reason) { toast.error("Pick a reason"); setSaving(false); return; }
+        await destroyPlant([entity.id], {
+          reason: reason as CcrsDestructionReason,
+          method,
+          pre_disposal_weight_grams: w,
+          notes: "Recorded via kiosk",
+        });
+        toast.success(`Plant destroyed · ${w}g`);
+      } else {
+        await adjustWaste({
+          batch_id: entity.id,
+          weight_grams: w,
+          reason: inventoryReason,
+          detail: "Recorded via kiosk",
+        });
+        toast.success(`Inventory waste recorded · ${w}g`);
+      }
+      setEntity(null); setEntityInput(""); setWeight(""); setReason("");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed");
+    } finally { setSaving(false); }
+  };
+
+  if (!wasteType) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-4">
+        <h2 className="text-[22px] font-bold text-center">Record Waste</h2>
+        <p className="text-[13px] text-muted-foreground text-center">What type of waste?</p>
+        <div className="grid grid-cols-2 gap-4">
+          <button onClick={() => setWasteType("plant")} className="aspect-square rounded-3xl border-2 border-green-500/30 bg-green-500/10 text-green-500 flex flex-col items-center justify-center gap-3">
+            <Leaf className="w-14 h-14" strokeWidth={1.5} />
+            <div className="text-[17px] font-bold">Plant Waste</div>
+          </button>
+          <button onClick={() => setWasteType("inventory")} className="aspect-square rounded-3xl border-2 border-amber-500/30 bg-amber-500/10 text-amber-500 flex flex-col items-center justify-center gap-3">
+            <Trash2 className="w-14 h-14" strokeWidth={1.5} />
+            <div className="text-[17px] font-bold">Inventory Waste</div>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto text-center py-16">
-      <Trash2 className="w-16 h-16 mx-auto text-amber-500 mb-4" />
-      <h2 className="text-[22px] font-bold">Record Waste</h2>
-      <p className="text-[14px] text-muted-foreground mt-2 mb-6">Full waste-recording flow wires into Disposals. Tap to open the desktop disposal modal.</p>
-      <Button onClick={() => toast.info("Use desktop Disposals page to record waste")} className="h-14 text-[14px] px-8 rounded-2xl">
-        Open Disposal Form
-      </Button>
+    <div className="max-w-2xl mx-auto space-y-4">
+      <div className="flex items-center gap-2">
+        <button onClick={() => { setWasteType(null); setEntity(null); setEntityInput(""); setWeight(""); }} className="w-10 h-10 rounded-lg border border-border bg-muted flex items-center justify-center">
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+        <h2 className="text-[18px] font-bold">{wasteType === "plant" ? "Plant" : "Inventory"} Waste</h2>
+      </div>
+
+      {!entity ? (
+        <div className="space-y-3">
+          <label className="block text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
+            Scan or enter {wasteType === "plant" ? "plant identifier" : "batch barcode"}
+          </label>
+          <div className="flex gap-2">
+            <Input value={entityInput} onChange={(e) => setEntityInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") lookupEntity(); }} autoFocus className="h-16 text-[18px] font-mono text-center" />
+            <Button onClick={lookupEntity} disabled={!entityInput.trim()} className="h-16 px-6">Find</Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4">
+            <div className="font-mono text-[16px] font-bold">{wasteType === "plant" ? entity.plant_identifier : entity.barcode}</div>
+            <div className="text-[11px] text-muted-foreground mt-1">
+              {wasteType === "plant"
+                ? `${entity.strain?.name ?? "—"} · ${entity.area?.name ?? "—"} · ${entity.phase ?? "—"}`
+                : `${entity.product?.name ?? "—"} · ${Number(entity.current_quantity ?? 0).toFixed(0)}g available`}
+            </div>
+          </div>
+
+          {wasteType === "plant" ? (
+            <>
+              <div className="space-y-2">
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Reason</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {CCRS_DESTRUCTION_REASONS.map((r) => (
+                    <button key={r} onClick={() => setReason(r)} className={cn("h-12 rounded-xl border-2 font-semibold text-[12px] transition-all", reason === r ? "border-primary bg-primary/10 text-primary" : "border-border bg-card")}>
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Method</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {CCRS_DESTRUCTION_METHODS.map((m) => (
+                    <button key={m} onClick={() => setMethod(m)} className={cn("h-12 rounded-xl border-2 font-semibold text-[12px] transition-all", method === m ? "border-primary bg-primary/10 text-primary" : "border-border bg-card")}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <label className="block text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Reason</label>
+              <div className="grid grid-cols-2 gap-2">
+                {CCRS_ADJUSTMENT_REASONS.map((r) => (
+                  <button key={r} onClick={() => setInventoryReason(r)} className={cn("h-12 rounded-xl border-2 font-semibold text-[12px] transition-all", inventoryReason === r ? "border-primary bg-primary/10 text-primary" : "border-border bg-card")}>
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="relative">
+            <Input value={weight} onChange={(e) => setWeight(e.target.value)} type="number" step="0.1" placeholder="0.0" className="h-28 text-[56px] font-mono text-center" />
+            <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[20px] text-muted-foreground">g</span>
+          </div>
+          <Button disabled={!weight || saving || (wasteType === "plant" && !reason)} onClick={handleSave} className="w-full h-16 text-[16px] font-bold rounded-2xl bg-amber-500 hover:bg-amber-500/90">
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : "Record Waste"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

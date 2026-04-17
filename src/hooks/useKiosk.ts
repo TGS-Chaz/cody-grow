@@ -173,3 +173,79 @@ export function useKioskLog() {
     if (error) throw error;
   }, [orgId]);
 }
+
+/** Record a scale reading — audit trail for every kiosk weigh. */
+export function useKioskScaleReading() {
+  const { orgId } = useOrg();
+  return useCallback(async (input: {
+    weight_grams: number;
+    entity_type?: string;
+    entity_id?: string | null;
+    operator_employee_id?: string | null;
+  }) => {
+    if (!orgId) throw new Error("No active org");
+    const { error } = await supabase.from("grow_scale_readings").insert({
+      org_id: orgId,
+      weight_grams: input.weight_grams,
+      entity_type: input.entity_type ?? "other",
+      entity_id: input.entity_id ?? null,
+      operator_employee_id: input.operator_employee_id ?? null,
+      recorded_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+  }, [orgId]);
+}
+
+/** Active harvests for a kiosk weigh context — filters to drying/cured status. */
+export function useKioskActiveHarvests() {
+  const { orgId } = useOrg();
+  const [data, setData] = useState<Array<{ id: string; name: string; status: string | null }>>([]);
+
+  useEffect(() => {
+    if (!orgId) return;
+    let cancelled = false;
+    (async () => {
+      const { data: rows } = await supabase.from("grow_harvests")
+        .select("id, name, status").eq("org_id", orgId)
+        .in("status", ["drying", "curing", "cured"]).order("created_at", { ascending: false });
+      if (!cancelled) setData((rows ?? []) as any);
+    })();
+    return () => { cancelled = true; };
+  }, [orgId]);
+
+  return data;
+}
+
+/** Record waste from inventory (batch adjustment) via kiosk. */
+export function useKioskRecordInventoryWaste() {
+  const { orgId } = useOrg();
+  return useCallback(async (input: {
+    batch_id: string;
+    weight_grams: number;
+    reason: string;
+    detail?: string;
+    operator_employee_id?: string | null;
+  }) => {
+    if (!orgId) throw new Error("No active org");
+    // Create adjustment (negative delta) + update batch current_quantity
+    const { data: batch } = await supabase.from("grow_batches")
+      .select("current_quantity").eq("id", input.batch_id).maybeSingle();
+    if (!batch) throw new Error("Batch not found");
+    const current = Number((batch as any).current_quantity ?? 0);
+    const next = current - input.weight_grams;
+    if (next < 0) throw new Error("Would leave negative quantity");
+    const now = new Date().toISOString();
+    await supabase.from("grow_inventory_adjustments").insert({
+      org_id: orgId,
+      external_id: `KIOSK-${Date.now()}`.slice(0, 17).padEnd(17, "0"),
+      batch_id: input.batch_id,
+      adjustment_reason: input.reason,
+      adjustment_detail: input.detail ?? "Recorded via kiosk",
+      quantity_delta: -input.weight_grams,
+      adjustment_date: now,
+    });
+    await supabase.from("grow_batches").update({
+      current_quantity: next, current_weight_grams: next,
+    }).eq("id", input.batch_id);
+  }, [orgId]);
+}

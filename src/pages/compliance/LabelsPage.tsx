@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ScrollableModal, { ModalHeader } from "@/components/ui/scrollable-modal";
 import PageHeader from "@/components/shared/PageHeader";
 import EmptyState from "@/components/shared/EmptyState";
+import BarcodeRenderer from "@/components/shared/BarcodeRenderer";
 import { useCodyContext } from "@/hooks/useCodyContext";
 import {
   useLabelTemplates, useCreateTemplate, useUpdateTemplate, useGenerateLabel,
@@ -312,8 +313,16 @@ function LabelPreview({ template, data }: { template: LabelTemplate; data: Label
         {config.include_not_for_kids && (
           <div className="w-10 h-8 border-2 border-destructive flex items-center justify-center text-[7px] font-bold text-destructive">NOT FOR KIDS</div>
         )}
-        <div className="flex-1 flex items-center justify-center h-10 border border-foreground font-mono text-[8px]">
-          {config.barcode_format === "QR" || config.barcode_format === "DataMatrix" ? "▣ " + data.lot_number.slice(-6) : "‖ ‖‖ ‖ ‖‖‖ ‖"}
+        <div className="flex-1 flex items-center justify-center h-10">
+          <BarcodeRenderer
+            value={data.lot_number}
+            format={config.barcode_format === "QR" ? "qr" : config.barcode_format === "DataMatrix" ? "datamatrix" : "code128"}
+            height={36}
+            width={config.barcode_format === "QR" || config.barcode_format === "DataMatrix" ? 36 : undefined}
+            showText={false}
+            backgroundColor="#ffffff"
+            foregroundColor="#000000"
+          />
         </div>
       </div>
       {config.include_warning_text && (
